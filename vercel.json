@@ -6,14 +6,6 @@
     }
   ],
   "buildCommand": "pip install --no-cache-dir -q -r backend/requirements.txt; cd frontend && npm run build",
-  "outputDirectory": "frontend/build",
-  "env": {
-    "PYTHON_VERSION": "3.11"
-  },
-  "functions": {
-    "api/*.py": {
-      "runtime": "python3.11"
-    }
-  }
+  "outputDirectory": "frontend/build"
 }
 
