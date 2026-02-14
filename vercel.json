@@ -5,8 +5,15 @@
       "destination": "/api"
     }
   ],
-  "buildCommand": "cd frontend && npm run build",
+  "buildCommand": "pip install --no-cache-dir -q -r backend/requirements.txt; cd frontend && npm run build",
   "outputDirectory": "frontend/build",
-  "installCommand": "pip install -r backend/requirements.txt && cd frontend && npm install --legacy-peer-deps"
+  "env": {
+    "PYTHON_VERSION": "3.11"
+  },
+  "functions": {
+    "api/*.py": {
+      "runtime": "python3.11"
+    }
+  }
 }
 

@@ -4,8 +4,17 @@ import os
 # Add backend to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
 
-from app import app as flask_app
+try:
+    from app import app as flask_app
+    app = flask_app
+except ImportError as e:
+    print(f"Error importing Flask app: {e}")
+    # Fallback app if import fails
+    from flask import Flask, jsonify
+    app = Flask(__name__)
+    
+    @app.route('/api/health', methods=['GET'])
+    def health_error():
+        return jsonify({'error': str(e)}), 500
 
-# Vercel serverless handler - export Flask app
-app = flask_app
 

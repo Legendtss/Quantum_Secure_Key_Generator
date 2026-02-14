@@ -5,9 +5,17 @@ Provides endpoints for quantum random number generation
 
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
-from quantum_generator import QuantumRandomGenerator
 import traceback
 import os
+
+# Try to import quantum module, but don't fail if it's not available
+try:
+    from quantum_generator import QuantumRandomGenerator
+    QUANTUM_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Could not import quantum_generator: {e}")
+    QUANTUM_AVAILABLE = False
+    QuantumRandomGenerator = None
 
 # Get the directory path for frontend build files
 FRONTEND_BUILD_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'build')
@@ -16,8 +24,16 @@ FRONTEND_BUILD_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend', '
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})  # Enable CORS for all API routes
 
-# Initialize quantum generator
-qrng = QuantumRandomGenerator()
+# Initialize quantum generator only if available
+if QUANTUM_AVAILABLE:
+    try:
+        qrng = QuantumRandomGenerator()
+    except Exception as e:
+        print(f"Warning: Could not initialize QuantumRandomGenerator: {e}")
+        QUANTUM_AVAILABLE = False
+        qrng = None
+else:
+    qrng = None
 
 
 @app.route('/api/health', methods=['GET'])
@@ -26,7 +42,8 @@ def health_check():
     return jsonify({
         'status': 'healthy',
         'service': 'Quantum Random Key Generator API',
-        'version': '1.0.0'
+        'version': '1.0.0',
+        'quantum_available': QUANTUM_AVAILABLE
     })
 
 
@@ -41,6 +58,12 @@ def generate_bit():
     Returns:
         JSON with bit value, counts, circuit diagram, and histogram
     """
+    if not QUANTUM_AVAILABLE:
+        return jsonify({
+            'success': False,
+            'error': 'Quantum generator not available in this environment'
+        }), 503
+    
     try:
         data = request.get_json() or {}
         shots = data.get('shots', 1000)
@@ -79,6 +102,12 @@ def generate_random():
     Returns:
         JSON with binary string, hex value, circuit, and histogram
     """
+    if not QUANTUM_AVAILABLE:
+        return jsonify({
+            'success': False,
+            'error': 'Quantum generator not available in this environment'
+        }), 503
+    
     try:
         data = request.get_json() or {}
         num_qubits = data.get('num_qubits', 8)
@@ -123,6 +152,12 @@ def generate_key():
     Returns:
         JSON with secure key in binary and hex formats, plus quantum metadata
     """
+    if not QUANTUM_AVAILABLE:
+        return jsonify({
+            'success': False,
+            'error': 'Quantum generator not available in this environment'
+        }), 503
+    
     try:
         data = request.get_json() or {}
         key_length = data.get('key_length', 256)
