@@ -1,0 +1,15 @@
+body {
+  margin: 0;
+  font-family: 'IBM Plex Mono', monospace;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #0a0e27;
+}
+
+code {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
