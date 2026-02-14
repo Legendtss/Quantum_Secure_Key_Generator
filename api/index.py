@@ -4,7 +4,8 @@ import os
 # Add backend to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
 
-from app import app
+from app import app as flask_app
 
-# Export the app for Vercel
-__all__ = ['app']
+# Vercel serverless handler - export Flask app
+app = flask_app
+
