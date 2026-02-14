@@ -5,7 +5,7 @@
       "destination": "/api"
     }
   ],
-  "buildCommand": "pip install --no-cache-dir -q -r backend/requirements.txt; cd frontend && npm run build",
+  "buildCommand": "pip install --break-system-packages -q -r backend/requirements.txt 2>/dev/null; cd frontend && npm run build 2>/dev/null || npm run build",
   "outputDirectory": "frontend/build"
 }
 
