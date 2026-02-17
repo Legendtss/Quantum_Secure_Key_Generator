@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import './QuantumBitGenerator.css';
 
-const API_URL = process.env.NODE_ENV === 'production'
-  ? '/api'
-  : (process.env.REACT_APP_API_URL || 'http://localhost:5000/api');
+const API_URL = 'http://localhost:5000/api';
 
 function QuantumBitGenerator() {
   const [loading, setLoading] = useState(false);

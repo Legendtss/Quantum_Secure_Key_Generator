@@ -5,35 +5,18 @@ Provides endpoints for quantum random number generation
 
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
+from quantum_generator import QuantumRandomGenerator
 import traceback
 import os
-
-# Try to import quantum module, but don't fail if it's not available
-try:
-    from quantum_generator import QuantumRandomGenerator
-    QUANTUM_AVAILABLE = True
-except ImportError as e:
-    print(f"Warning: Could not import quantum_generator: {e}")
-    QUANTUM_AVAILABLE = False
-    QuantumRandomGenerator = None
 
 # Get the directory path for frontend build files
 FRONTEND_BUILD_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'build')
 
-# Don't set static folder for Vercel serverless - frontend is deployed separately
-app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "*"}})  # Enable CORS for all API routes
+app = Flask(__name__, static_folder=FRONTEND_BUILD_DIR, static_url_path='')
+CORS(app)  # Enable CORS for frontend communication
 
-# Initialize quantum generator only if available
-if QUANTUM_AVAILABLE:
-    try:
-        qrng = QuantumRandomGenerator()
-    except Exception as e:
-        print(f"Warning: Could not initialize QuantumRandomGenerator: {e}")
-        QUANTUM_AVAILABLE = False
-        qrng = None
-else:
-    qrng = None
+# Initialize quantum generator
+qrng = QuantumRandomGenerator()
 
 
 @app.route('/api/health', methods=['GET'])
@@ -42,8 +25,7 @@ def health_check():
     return jsonify({
         'status': 'healthy',
         'service': 'Quantum Random Key Generator API',
-        'version': '1.0.0',
-        'quantum_available': QUANTUM_AVAILABLE
+        'version': '1.0.0'
     })
 
 
@@ -58,12 +40,6 @@ def generate_bit():
     Returns:
         JSON with bit value, counts, circuit diagram, and histogram
     """
-    if not QUANTUM_AVAILABLE:
-        return jsonify({
-            'success': False,
-            'error': 'Quantum generator not available in this environment'
-        }), 503
-    
     try:
         data = request.get_json() or {}
         shots = data.get('shots', 1000)
@@ -102,12 +78,6 @@ def generate_random():
     Returns:
         JSON with binary string, hex value, circuit, and histogram
     """
-    if not QUANTUM_AVAILABLE:
-        return jsonify({
-            'success': False,
-            'error': 'Quantum generator not available in this environment'
-        }), 503
-    
     try:
         data = request.get_json() or {}
         num_qubits = data.get('num_qubits', 8)
@@ -152,12 +122,6 @@ def generate_key():
     Returns:
         JSON with secure key in binary and hex formats, plus quantum metadata
     """
-    if not QUANTUM_AVAILABLE:
-        return jsonify({
-            'success': False,
-            'error': 'Quantum generator not available in this environment'
-        }), 503
-    
     try:
         data = request.get_json() or {}
         key_length = data.get('key_length', 256)
@@ -234,3 +198,22 @@ if __name__ == '__main__':
     print("=" * 50)
     
     app.run(debug=True, host='0.0.0.0', port=5000)
+
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_frontend(path):
+    """Serve React frontend - handles SPA routing"""
+    # If path starts with 'api/', let Flask handle it as an API route
+    if path.startswith('api/'):
+        return jsonify({'error': 'API endpoint not found'}), 404
+    
+    # Try to serve the file from static folder
+    if path and os.path.exists(os.path.join(FRONTEND_BUILD_DIR, path)):
+        return send_from_directory(FRONTEND_BUILD_DIR, path)
+    
+    # Return index.html for SPA routing (enables React Router)
+    if os.path.exists(os.path.join(FRONTEND_BUILD_DIR, 'index.html')):
+        return send_from_directory(FRONTEND_BUILD_DIR, 'index.html')
+    
+    return jsonify({'error': 'Frontend not built. Run: cd frontend && npm run build'}), 404

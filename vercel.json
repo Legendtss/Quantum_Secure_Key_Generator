@@ -1,5 +1,0 @@
-{
-  "buildCommand": "pip install --break-system-packages -q -r backend/requirements.txt 2>&1 && cd frontend && npm install && npm run build",
-  "outputDirectory": "frontend/build"
-}
-
