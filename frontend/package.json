@@ -2,6 +2,7 @@
   "name": "quantum-key-generator-frontend",
   "version": "1.0.0",
   "description": "Quantum-Based Secure Random Key Generator - Frontend",
+  "homepage": "https://Legendtss.github.io/Quantum_Secure_Key_Generator",
   "private": true,
   "dependencies": {
     "react": "^18.2.0",
