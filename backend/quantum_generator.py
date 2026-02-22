@@ -108,6 +108,23 @@ class QuantumRandomGenerator:
             'shots': shots
         }
     
+    def _generate_raw_bits(self, num_qubits=8, shots=1000):
+        """
+        Lightweight method to generate raw quantum random bits without visualizations.
+        Used internally by generate_secure_key to avoid creating expensive
+        histogram images for each chunk.
+        """
+        qc = QuantumCircuit(num_qubits, num_qubits)
+        for i in range(num_qubits):
+            qc.h(i)
+        qc.measure(range(num_qubits), range(num_qubits))
+        
+        compiled_circuit = transpile(qc, self.simulator)
+        result = self.simulator.run(compiled_circuit, shots=shots).result()
+        counts = result.get_counts()
+        
+        return max(counts, key=counts.get)
+
     def generate_secure_key(self, key_length=256, shots=1024):
         """
         Generate a secure cryptographic key using quantum randomness
@@ -119,13 +136,13 @@ class QuantumRandomGenerator:
         Returns:
             dict: Secure key in multiple formats with quantum data
         """
-        # Generate multiple quantum random bits
+        # Generate multiple quantum random bits using lightweight method
         all_bits = []
         chunks = (key_length + 7) // 8  # Number of 8-bit chunks needed
         
         for _ in range(chunks):
-            result = self.generate_random_bits(num_qubits=8, shots=shots)
-            all_bits.append(result['binary'])
+            bits = self._generate_raw_bits(num_qubits=8, shots=shots)
+            all_bits.append(bits)
         
         # Combine all bits
         full_binary = ''.join(all_bits)[:key_length]
