@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './QuantumKeyGenerator.css';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.REACT_APP_API_URL || 'https://quantum-secure-key-generator.onrender.com/api';
 
 function QuantumKeyGenerator() {
   const [loading, setLoading] = useState(false);
