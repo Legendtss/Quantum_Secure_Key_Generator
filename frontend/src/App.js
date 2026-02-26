@@ -3,6 +3,10 @@ import './App.css';
 import QuantumBitGenerator from './components/QuantumBitGenerator';
 import QuantumKeyGenerator from './components/QuantumKeyGenerator';
 import QuantumInfo from './components/QuantumInfo';
+import EncryptionDemo from './components/EncryptionDemo';
+import EntropyAnalysis from './components/EntropyAnalysis';
+import ComparisonTable from './components/ComparisonTable';
+import IBMQuantumToggle from './components/IBMQuantumToggle';
 
 function App() {
   const [activeTab, setActiveTab] = useState('bit');
@@ -25,11 +29,11 @@ function App() {
             <div className="quantum-icon">⚛</div>
             <div>
               <h1 className="title">Quantum Key Generator</h1>
-              <p className="subtitle">True Randomness Through Superposition</p>
+              <p className="subtitle">Production-Grade Quantum Cryptographic Infrastructure</p>
             </div>
           </div>
           <div className="header-badge">
-            <span className="badge-text">Educational Demo</span>
+            <span className="badge-text">Enhanced Edition</span>
           </div>
         </div>
       </header>
@@ -51,11 +55,39 @@ function App() {
           Secure Key
         </button>
         <button 
+          className={`tab ${activeTab === 'encrypt' ? 'active' : ''}`}
+          onClick={() => setActiveTab('encrypt')}
+        >
+          <span className="tab-icon">🔒</span>
+          Encryption
+        </button>
+        <button 
+          className={`tab ${activeTab === 'entropy' ? 'active' : ''}`}
+          onClick={() => setActiveTab('entropy')}
+        >
+          <span className="tab-icon">📊</span>
+          Entropy
+        </button>
+        <button 
+          className={`tab ${activeTab === 'compare' ? 'active' : ''}`}
+          onClick={() => setActiveTab('compare')}
+        >
+          <span className="tab-icon">⚔️</span>
+          Compare
+        </button>
+        <button 
+          className={`tab ${activeTab === 'ibm' ? 'active' : ''}`}
+          onClick={() => setActiveTab('ibm')}
+        >
+          <span className="tab-icon">🖥️</span>
+          IBM Quantum
+        </button>
+        <button 
           className={`tab ${activeTab === 'info' ? 'active' : ''}`}
           onClick={() => setActiveTab('info')}
         >
           <span className="tab-icon">📚</span>
-          Learn More
+          Learn
         </button>
       </nav>
 
@@ -64,13 +96,17 @@ function App() {
         <div className="content-wrapper">
           {activeTab === 'bit' && <QuantumBitGenerator />}
           {activeTab === 'key' && <QuantumKeyGenerator />}
+          {activeTab === 'encrypt' && <EncryptionDemo />}
+          {activeTab === 'entropy' && <EntropyAnalysis />}
+          {activeTab === 'compare' && <ComparisonTable />}
+          {activeTab === 'ibm' && <IBMQuantumToggle />}
           {activeTab === 'info' && <QuantumInfo />}
         </div>
       </main>
 
       {/* Footer */}
       <footer className="footer">
-        <p>Built with Qiskit • Simulated on AerSimulator • For Educational Purposes</p>
+        <p>Built with Qiskit • AES-256 Encryption • IBM Quantum Support • NIST-Inspired Tests</p>
       </footer>
     </div>
   );

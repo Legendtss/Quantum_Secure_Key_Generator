@@ -1,7 +1,9 @@
 qiskit==1.0.0
 qiskit-aer==0.13.3
+qiskit-ibm-runtime==0.20.0
 flask==3.0.0
 flask-cors==4.0.0
 matplotlib==3.8.2
 numpy==1.26.3
 gunicorn==22.0.0
+cryptography==42.0.0
