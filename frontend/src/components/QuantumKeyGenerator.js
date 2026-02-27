@@ -90,7 +90,7 @@ function QuantumKeyGenerator({ runtimeMode = 'simulator', ibmStatus = {} }) {
               onChange={(e) => setShots(parseInt(e.target.value))}
               className="input-field"
             />
-            <span className="input-hint">Measurements per 8-qubit circuit</span>
+            <span className="input-hint">Measurements per 16-qubit circuit</span>
           </div>
         </div>
 
@@ -177,10 +177,10 @@ function QuantumKeyGenerator({ runtimeMode = 'simulator', ibmStatus = {} }) {
 
             {/* Circuit Diagram */}
             <div className="circuit-section">
-              <h3 className="section-title">Sample Quantum Circuit (8-qubit)</h3>
+              <h3 className="section-title">Sample Quantum Circuit (16-qubit)</h3>
               <pre className="circuit-display">{result.circuit}</pre>
               <div className="circuit-info">
-                <p>Each chunk uses 8 qubits with Hadamard gates in superposition</p>
+                <p>Each chunk uses 16 qubits with Hadamard gates in superposition</p>
                 <p>Total quantum circuits executed: {result.chunks_generated}</p>
               </div>
             </div>
