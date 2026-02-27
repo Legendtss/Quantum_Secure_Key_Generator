@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './IBMQuantumToggle.css';
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = 'https://quantum-secure-key-generator.onrender.com/api';
 
 function IBMQuantumToggle({ onStatusChange }) {
     const [status, setStatus] = useState({
