@@ -3,9 +3,8 @@ import './ComparisonTable.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
-function ComparisonTable() {
+function ComparisonTable({ runtimeMode = 'simulator', ibmStatus = {} }) {
   const [bitLength, setBitLength] = useState(256);
-  const [compareMode, setCompareMode] = useState('simulator');
   const [shots, setShots] = useState(1024);
   const [loading, setLoading] = useState(false);
   const [comparisonData, setComparisonData] = useState(null);
@@ -16,6 +15,13 @@ function ComparisonTable() {
     setError(null);
     
     try {
+      const compareMode = runtimeMode === 'hardware' ? 'ibm_hardware' : 'simulator';
+      if (compareMode === 'ibm_hardware' && !(ibmStatus.connected && ibmStatus.backend)) {
+        setError('Real hardware mode requires IBM connection and backend selection.');
+        setLoading(false);
+        return;
+      }
+
       const response = await fetch(
         `${API_URL}/compare?length=${bitLength}&mode=${compareMode}&shots=${shots}`,
         {
@@ -72,16 +78,12 @@ function ComparisonTable() {
           </div>
 
           <div className="input-group">
-            <label htmlFor="compareMode">Quantum Source</label>
-            <select
-              id="compareMode"
-              value={compareMode}
-              onChange={(e) => setCompareMode(e.target.value)}
-              className="input-field"
-            >
-              <option value="simulator">Simulator</option>
-              <option value="ibm_hardware">IBM Hardware</option>
-            </select>
+            <label>Quantum Source</label>
+            <div className="input-field" style={{ display: 'flex', alignItems: 'center' }}>
+              {runtimeMode === 'hardware'
+                ? `IBM Hardware${ibmStatus.backend ? ` (${ibmStatus.backend})` : ''}`
+                : 'Simulator'}
+            </div>
           </div>
 
           <div className="input-group">
@@ -339,7 +341,7 @@ function ComparisonTable() {
             <li>True randomness</li>
             <li>Unpredictable by nature</li>
             <li>Ideal for cryptography</li>
-            <li>Slower (circuit simulation overhead)</li>
+            <li>Variable speed (simulation is faster; hardware may queue)</li>
           </ul>
         </div>
 

@@ -18,8 +18,12 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-md);
-  align-items: end;
+  align-items: center;
   margin-top: var(--space-lg);
+}
+
+.comparison-controls .generate-button {
+  margin-top: 12px;
 }
 
 .compare-btn {
@@ -370,8 +374,22 @@
 
 .info-section {
   margin-bottom: var(--space-lg);
-  padding-bottom: var(--space-md);
-  border-bottom: 1px solid var(--quantum-light);
+  padding: var(--space-md);
+  border: 1px solid var(--quantum-light);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.04), rgba(124, 58, 237, 0.04));
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  opacity: 0;
+  animation: infoCardIn 0.55s ease-out forwards;
+}
+
+.info-section:nth-of-type(1) { animation-delay: 0.08s; }
+.info-section:nth-of-type(2) { animation-delay: 0.16s; }
+
+.info-section:hover {
+  transform: translateY(-4px);
+  border-color: rgba(0, 212, 255, 0.45);
+  box-shadow: 0 10px 24px rgba(0, 212, 255, 0.18);
 }
 
 .info-section h4 {
@@ -487,4 +505,15 @@
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@keyframes infoCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }

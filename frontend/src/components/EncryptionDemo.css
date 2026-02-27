@@ -16,7 +16,8 @@
 
 .key-section,
 .encrypt-section,
-.decrypt-section {
+.decrypt-section,
+.file-section {
   margin-top: var(--space-xl);
   padding-top: var(--space-lg);
   border-top: 1px solid var(--quantum-light);
@@ -32,8 +33,12 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-md);
-  align-items: end;
+  align-items: center;
   margin-bottom: var(--space-md);
+}
+
+.key-controls .generate-button {
+  margin-top: 12px;
 }
 
 .quantum-key-btn {
@@ -99,6 +104,32 @@
 
 .input-textarea::placeholder {
   color: var(--text-muted);
+}
+
+.file-input {
+  width: 100%;
+  background: rgba(10, 14, 39, 0.6);
+  border: 1px solid var(--quantum-light);
+  border-radius: 8px;
+  padding: var(--space-md);
+  color: var(--text-primary);
+}
+
+.file-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.file-meta {
+  display: grid;
+  gap: var(--space-xs);
+  margin-top: var(--space-md);
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--quantum-light);
+  border-radius: 8px;
+  padding: var(--space-md);
 }
 
 .encrypt-btn {
@@ -268,12 +299,26 @@
   display: flex;
   gap: var(--space-md);
   margin-bottom: var(--space-lg);
-  padding-bottom: var(--space-md);
-  border-bottom: 1px solid var(--quantum-light);
+  padding: var(--space-md);
+  border: 1px solid var(--quantum-light);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.04), rgba(124, 58, 237, 0.04));
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  opacity: 0;
+  animation: infoCardIn 0.55s ease-out forwards;
+}
+
+.info-item:nth-of-type(1) { animation-delay: 0.08s; }
+.info-item:nth-of-type(2) { animation-delay: 0.16s; }
+.info-item:nth-of-type(3) { animation-delay: 0.24s; }
+
+.info-item:hover {
+  transform: translateY(-4px);
+  border-color: rgba(0, 212, 255, 0.45);
+  box-shadow: 0 10px 24px rgba(0, 212, 255, 0.18);
 }
 
 .info-item:last-of-type {
-  border-bottom: none;
   margin-bottom: var(--space-md);
 }
 
@@ -314,6 +359,10 @@
   .key-controls {
     grid-template-columns: 1fr;
   }
+
+  .file-actions {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Animation */
@@ -325,5 +374,16 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes infoCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }

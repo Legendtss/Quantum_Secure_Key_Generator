@@ -353,6 +353,56 @@ def encrypt_file():
         }), 500
 
 
+@app.route('/api/decrypt-file', methods=['POST'])
+def decrypt_file():
+    """
+    Decrypt file data using AES with a quantum-generated key.
+
+    Request body:
+        encrypted_data: Base64 encoded encrypted file content
+        key: Hex string key (same as used for encryption)
+        iv: Base64 encoded IV from encryption response
+        key_size (optional): 128 or 256 (default: 256)
+
+    Returns:
+        JSON with decrypted file data and metadata
+    """
+    try:
+        data = request.get_json() or {}
+
+        encrypted_data_b64 = data.get('encrypted_data')
+        key = data.get('key')
+        iv = data.get('iv')
+        key_size = data.get('key_size', 256)
+
+        if not encrypted_data_b64:
+            return jsonify({'success': False, 'error': 'encrypted_data is required'}), 400
+        if not key:
+            return jsonify({'success': False, 'error': 'Key is required'}), 400
+        if not iv:
+            return jsonify({'success': False, 'error': 'IV is required'}), 400
+
+        result = crypto_engine.decrypt_file(encrypted_data_b64, key, iv, key_size)
+
+        if result.get('success'):
+            return jsonify({
+                'success': True,
+                'data': result
+            })
+
+        return jsonify({
+            'success': False,
+            'error': result.get('error', 'File decryption failed')
+        }), 400
+
+    except Exception as e:
+        print(f"Error in decrypt_file: {traceback.format_exc()}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 # ============================================================================
 # NEW FEATURE 2: ENTROPY ANALYSIS ENDPOINT
 # ============================================================================
@@ -539,7 +589,7 @@ def ibm_connect():
     
     Request body:
         api_token (optional): IBM Quantum API token
-        channel (optional): 'ibm_quantum_platform' (free) or 'ibm_cloud' (paid)
+        channel (optional): 'ibm_quantum' (free) or 'ibm_cloud' (paid)
     
     Returns:
         JSON with connection status and available backends
@@ -547,7 +597,7 @@ def ibm_connect():
     try:
         data = request.get_json() or {}
         api_token = data.get('api_token')
-        channel = data.get('channel', 'ibm_quantum_platform')
+        channel = data.get('channel', 'ibm_quantum')
         
         # First try auto-connect with saved credentials
         if not api_token:
@@ -751,6 +801,7 @@ if __name__ == '__main__':
     print('  POST /api/encrypt         - AES encrypt with quantum key')
     print('  POST /api/decrypt         - AES decrypt with quantum key')
     print('  POST /api/encrypt-file    - Encrypt file data')
+    print('  POST /api/decrypt-file    - Decrypt file data')
     print('  POST /api/analyze-entropy - Analyze randomness quality')
     print('  GET  /api/compare         - Classical vs Quantum comparison')
     print('  POST /api/generate-classical - Generate classical random bits')

@@ -1,5 +1,7 @@
 import React from 'react';
 import './QuantumInfo.css';
+import ibmQiskitImage from './ibm-qiskit.png';
+import ibmQuantumComputerImage from './ibm-quantum-computer.jpg';
 
 function QuantumInfo() {
   return (
@@ -193,8 +195,8 @@ function QuantumInfo() {
           
           <div className="tech-details">
             <div className="tech-item">
-              <h4>Simulator Used</h4>
-              <p><code>qiskit-aer</code> - AerSimulator for quantum circuit simulation</p>
+              <h4>Execution Backends</h4>
+              <p><code>qiskit-aer</code> for local simulation and optional IBM Quantum hardware for real-device execution.</p>
             </div>
             
             <div className="tech-item">
@@ -211,8 +213,88 @@ function QuantumInfo() {
             
             <div className="tech-item">
               <h4>Real vs Simulated</h4>
-              <p>This demo uses a simulator. Real quantum hardware (like IBM Quantum or 
-              IonQ systems) provides genuine quantum randomness from physical qubits.</p>
+              <p>This app supports both modes: fast local simulation and real IBM Quantum hardware.
+              Hardware mode measures physical qubits, while simulator mode is useful for rapid testing and learning.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Runtime Modes Guide */}
+        <div className="info-section">
+          <div className="section-icon">Runtime</div>
+          <h3 className="section-heading">Runtime Modes: Simulator vs IBM Hardware</h3>
+          <p className="section-text">
+            This project supports two execution paths. Simulation mode is best for fast iteration,
+            while IBM Hardware mode runs on physical qubits for real-device measurements.
+          </p>
+
+          <div className="comparison-grid">
+            <div className="comparison-card classical">
+              <div className="runtime-mode-image-wrap">
+                <img
+                  src={ibmQiskitImage}
+                  alt="IBM Qiskit visual"
+                  className="runtime-mode-image"
+                />
+              </div>
+              <h4>Simulation Mode (Local)</h4>
+              <ul>
+                <li><strong>Engine:</strong> <code>qiskit-aer</code> AerSimulator</li>
+                <li><strong>Execution:</strong> Runs locally on your machine</li>
+                <li><strong>Latency:</strong> Low, no hardware queue delay</li>
+                <li><strong>Best for:</strong> Testing, demos, and rapid experiments</li>
+              </ul>
+            </div>
+
+            <div className="comparison-card quantum">
+              <div className="runtime-mode-image-wrap">
+                <img
+                  src={ibmQuantumComputerImage}
+                  alt="IBM quantum computer visual"
+                  className="runtime-mode-image"
+                />
+              </div>
+              <h4>IBM Hardware Mode (Real Qubits)</h4>
+              <ul>
+                <li><strong>Engine:</strong> IBM Quantum Runtime + selected backend</li>
+                <li><strong>Execution:</strong> Runs remotely on physical quantum hardware</li>
+                <li><strong>Latency:</strong> Can include queue and backend wait time</li>
+                <li><strong>Best for:</strong> Real-device runs and hardware-backed entropy</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="steps-container">
+            <div className="step-card">
+              <div className="step-num">1</div>
+              <div className="step-content">
+                <h4>Choose Runtime</h4>
+                <p>Select Simulation or Real Hardware from the runtime switch in the app header.</p>
+              </div>
+            </div>
+
+            <div className="step-card">
+              <div className="step-num">2</div>
+              <div className="step-content">
+                <h4>Connect IBM (Hardware Only)</h4>
+                <p>Enter your IBM Quantum API token, connect, and select an available backend.</p>
+              </div>
+            </div>
+
+            <div className="step-card">
+              <div className="step-num">3</div>
+              <div className="step-content">
+                <h4>Execute Quantum Jobs</h4>
+                <p>The app runs Hadamard-based circuits and collects measured counts from the chosen mode.</p>
+              </div>
+            </div>
+
+            <div className="step-card">
+              <div className="step-num">4</div>
+              <div className="step-content">
+                <h4>Generate and Use Keys</h4>
+                <p>Measured bits are assembled into keys for encryption demos, entropy checks, and comparisons.</p>
+              </div>
             </div>
           </div>
         </div>

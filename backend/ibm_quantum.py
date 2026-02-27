@@ -59,13 +59,13 @@ class IBMQuantumManager:
                       'Install qiskit-ibm-runtime: pip install qiskit-ibm-runtime'
         }
     
-    def connect(self, api_token: str = None, channel: str = "ibm_quantum_platform") -> Dict:
+    def connect(self, api_token: str = None, channel: str = "ibm_quantum") -> Dict:
         """
         Connect to IBM Quantum service.
         
         Args:
             api_token: IBM Quantum API token (or uses saved token)
-            channel: 'ibm_quantum_platform' for free tier, 'ibm_cloud' for paid
+            channel: 'ibm_quantum' (IBM Quantum Platform) or 'ibm_cloud'
             
         Returns:
             dict: Connection status and available backends
@@ -78,17 +78,32 @@ class IBMQuantumManager:
             }
         
         try:
+            # Use "ibm_quantum_platform" for compatibility with the expected channel values.
+            # The error message indicates the runtime expects 'ibm_quantum_platform', not 'ibm_quantum'.
+            channel_aliases = {
+                "ibm_quantum_platform": "ibm_quantum_platform",
+                "ibm_quantum": "ibm_quantum_platform",  # Map modern name to legacy name
+                "ibm_cloud": "ibm_cloud"
+            }
+            normalized_channel = channel_aliases.get(channel, channel)
+
+            if normalized_channel not in {"ibm_quantum_platform", "ibm_cloud"}:
+                return {
+                    'success': False,
+                    'error': f"Invalid channel '{channel}'. Use 'ibm_quantum_platform' or 'ibm_cloud'."
+                }
+
             if api_token:
                 # Save credentials for future use
                 QiskitRuntimeService.save_account(
-                    channel=channel,
+                    channel=normalized_channel,
                     token=api_token,
                     overwrite=True
                 )
                 self.api_token = api_token
             
             # Connect to service
-            self.service = QiskitRuntimeService(channel=channel)
+            self.service = QiskitRuntimeService(channel=normalized_channel)
             self.connected = True
             
             # Get available backends
@@ -97,7 +112,7 @@ class IBMQuantumManager:
             return {
                 'success': True,
                 'connected': True,
-                'channel': channel,
+                'channel': normalized_channel,
                 'backends': backends,
                 'message': f'Connected to IBM Quantum. {len(backends)} backends available.'
             }

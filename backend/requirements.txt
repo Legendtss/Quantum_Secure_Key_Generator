@@ -1,6 +1,6 @@
-qiskit==1.0.0
-qiskit-aer==0.13.3
-qiskit-ibm-runtime==0.20.0
+qiskit==2.3.0
+qiskit-aer==0.17.2
+qiskit-ibm-runtime==0.45.1
 flask==3.0.0
 flask-cors==4.0.0
 matplotlib==3.8.2

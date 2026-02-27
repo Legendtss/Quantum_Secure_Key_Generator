@@ -3,7 +3,7 @@ import './QuantumBitGenerator.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
-function QuantumBitGenerator() {
+function QuantumBitGenerator({ runtimeMode = 'simulator', ibmStatus = {} }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [shots, setShots] = useState(1000);
@@ -14,12 +14,23 @@ function QuantumBitGenerator() {
     setError(null);
     
     try {
-      const response = await fetch(`${API_URL}/generate-bit`, {
+      const useIBM = runtimeMode === 'hardware';
+
+      if (useIBM && !(ibmStatus.connected && ibmStatus.backend)) {
+        setError('Real hardware mode requires IBM connection and backend selection.');
+        setLoading(false);
+        return;
+      }
+
+      const endpoint = useIBM ? `${API_URL}/generate-bit-ibm` : `${API_URL}/generate-bit`;
+      const payload = useIBM ? { shots, use_ibm: true } : { shots };
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ shots }),
+        body: JSON.stringify(payload),
       });
       
       const data = await response.json();

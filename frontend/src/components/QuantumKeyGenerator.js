@@ -3,7 +3,7 @@ import './QuantumKeyGenerator.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
-function QuantumKeyGenerator() {
+function QuantumKeyGenerator({ runtimeMode = 'simulator', ibmStatus = {} }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [keyLength, setKeyLength] = useState(256);
@@ -17,12 +17,19 @@ function QuantumKeyGenerator() {
     setCopied(false);
     
     try {
+      const useIBM = runtimeMode === 'hardware';
+      if (useIBM && !(ibmStatus.connected && ibmStatus.backend)) {
+        setError('Real hardware mode requires IBM connection and backend selection.');
+        setLoading(false);
+        return;
+      }
+
       const response = await fetch(`${API_URL}/generate-key`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ key_length: keyLength, shots }),
+        body: JSON.stringify({ key_length: keyLength, shots, use_ibm: useIBM }),
       });
       
       const data = await response.json();
@@ -247,7 +254,7 @@ function QuantumKeyGenerator() {
           <div className="warning-icon">⚠️</div>
           <div>
             <h4>Educational Demo Only</h4>
-            <p>This is a simulated quantum system for learning purposes. For production cryptography, use certified hardware quantum random number generators or vetted cryptographic libraries.</p>
+            <p>This app supports both simulation and real IBM Quantum hardware modes for learning and experimentation. For production cryptography, use certified quantum random number generators and vetted cryptographic libraries.</p>
           </div>
         </div>
       </div>

@@ -12,6 +12,15 @@ function EncryptionDemo() {
   const [decryptedText, setDecryptedText] = useState('');
   const [encryptionResult, setEncryptionResult] = useState(null);
   const [decryptionResult, setDecryptionResult] = useState(null);
+  const [fileToEncrypt, setFileToEncrypt] = useState(null);
+  const [fileFlow, setFileFlow] = useState({
+    encryptedData: '',
+    iv: '',
+    originalFileName: '',
+    originalMimeType: 'application/octet-stream',
+    encryptedSize: 0,
+    decryptedSize: 0
+  });
   const [loading, setLoading] = useState({ key: false, encrypt: false, decrypt: false });
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState('');
@@ -37,6 +46,14 @@ function EncryptionDemo() {
         setDecryptedText('');
         setEncryptionResult(null);
         setDecryptionResult(null);
+        setFileFlow({
+          encryptedData: '',
+          iv: '',
+          originalFileName: '',
+          originalMimeType: 'application/octet-stream',
+          encryptedSize: 0,
+          decryptedSize: 0
+        });
       } else {
         setError(data.error || 'Failed to generate key');
       }
@@ -125,6 +142,144 @@ function EncryptionDemo() {
     navigator.clipboard.writeText(text);
     setCopied(field);
     setTimeout(() => setCopied(''), 2000);
+  };
+
+  const fileToBase64 = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result !== 'string' || !result.includes(',')) {
+        reject(new Error('Failed to read file'));
+        return;
+      }
+      resolve(result.split(',')[1]);
+    };
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
+
+  const base64ToBlob = (b64, mimeType = 'application/octet-stream') => {
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return new Blob([bytes], { type: mimeType });
+  };
+
+  const triggerDownload = (blob, fileName) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const encryptFile = async () => {
+    if (!fileToEncrypt || !quantumKey) {
+      setError('Select a file and generate a quantum key first');
+      return;
+    }
+
+    setLoading((prev) => ({ ...prev, encrypt: true }));
+    setError(null);
+
+    try {
+      const fileData = await fileToBase64(fileToEncrypt);
+      const response = await fetch(`${API_URL}/encrypt-file`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          file_data: fileData,
+          key: quantumKey,
+          key_size: keySize
+        })
+      });
+
+      const data = await response.json();
+      if (!data.success) {
+        setError(data.error || 'File encryption failed');
+        return;
+      }
+
+      setFileFlow({
+        encryptedData: data.data.encrypted_data,
+        iv: data.data.iv,
+        originalFileName: fileToEncrypt.name,
+        originalMimeType: fileToEncrypt.type || 'application/octet-stream',
+        encryptedSize: data.data.encrypted_size,
+        decryptedSize: 0
+      });
+    } catch (err) {
+      setError('Failed to encrypt file');
+    } finally {
+      setLoading((prev) => ({ ...prev, encrypt: false }));
+    }
+  };
+
+  const downloadEncryptedBundle = () => {
+    if (!fileFlow.encryptedData || !fileFlow.iv) {
+      setError('Encrypt a file first');
+      return;
+    }
+
+    const bundle = {
+      encrypted_data: fileFlow.encryptedData,
+      iv: fileFlow.iv,
+      key_size: keySize,
+      original_name: fileFlow.originalFileName,
+      original_mime_type: fileFlow.originalMimeType
+    };
+    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+    const outputName = `${fileFlow.originalFileName || 'encrypted-file'}.qenc.json`;
+    triggerDownload(blob, outputName);
+  };
+
+  const decryptFile = async () => {
+    if (!fileFlow.encryptedData || !fileFlow.iv || !quantumKey) {
+      setError('Encrypt a file first');
+      return;
+    }
+
+    setLoading((prev) => ({ ...prev, decrypt: true }));
+    setError(null);
+
+    try {
+      const response = await fetch(`${API_URL}/decrypt-file`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          encrypted_data: fileFlow.encryptedData,
+          key: quantumKey,
+          iv: fileFlow.iv,
+          key_size: keySize
+        })
+      });
+
+      const data = await response.json();
+      if (!data.success) {
+        setError(data.error || 'File decryption failed');
+        return;
+      }
+
+      const decryptedBlob = base64ToBlob(data.data.decrypted_data, fileFlow.originalMimeType);
+      const restoredName = fileFlow.originalFileName
+        ? `restored-${fileFlow.originalFileName}`
+        : 'restored-file.bin';
+      triggerDownload(decryptedBlob, restoredName);
+
+      setFileFlow((prev) => ({
+        ...prev,
+        decryptedSize: data.data.decrypted_size || 0
+      }));
+    } catch (err) {
+      setError('Failed to decrypt file');
+    } finally {
+      setLoading((prev) => ({ ...prev, decrypt: false }));
+    }
   };
 
   return (
@@ -278,6 +433,61 @@ function EncryptionDemo() {
             )}
           </div>
         )}
+
+        <div className="file-section">
+          <h3 className="section-title">Step 4: Encrypt and Decrypt Files</h3>
+
+          <div className="input-group">
+            <label htmlFor="fileInput">Choose File</label>
+            <input
+              id="fileInput"
+              type="file"
+              className="file-input"
+              onChange={(e) => setFileToEncrypt(e.target.files?.[0] || null)}
+            />
+            <span className="input-hint">
+              {fileToEncrypt ? `${fileToEncrypt.name} (${fileToEncrypt.size} bytes)` : 'No file selected'}
+            </span>
+          </div>
+
+          <div className="file-actions">
+            <button
+              onClick={encryptFile}
+              disabled={loading.encrypt || !fileToEncrypt || !quantumKey}
+              className="generate-button encrypt-btn"
+            >
+              {loading.encrypt ? <><span className="spinner"></span> Encrypting File...</> : 'Encrypt File'}
+            </button>
+
+            <button
+              onClick={downloadEncryptedBundle}
+              disabled={!fileFlow.encryptedData}
+              className="generate-button"
+              type="button"
+            >
+              Download Encrypted Bundle
+            </button>
+
+            <button
+              onClick={decryptFile}
+              disabled={loading.decrypt || !fileFlow.encryptedData}
+              className="generate-button decrypt-btn"
+              type="button"
+            >
+              {loading.decrypt ? <><span className="spinner"></span> Decrypting...</> : 'Decrypt and Download'}
+            </button>
+          </div>
+
+          {fileFlow.encryptedData && (
+            <div className="file-meta">
+              <span className="meta-info">Encrypted size: {fileFlow.encryptedSize} bytes</span>
+              <span className="meta-info">IV: {fileFlow.iv}</span>
+              {fileFlow.decryptedSize > 0 && (
+                <span className="meta-info">Decrypted size: {fileFlow.decryptedSize} bytes</span>
+              )}
+            </div>
+          )}
+        </div>
 
         {error && (
           <div className="error-message">
