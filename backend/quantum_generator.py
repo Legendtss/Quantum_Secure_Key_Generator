@@ -123,11 +123,15 @@ class QuantumRandomGenerator:
         result = self.simulator.run(compiled_circuit, shots=shots).result()
         counts = result.get_counts()
         
-        return max(counts, key=counts.get)
+        raw_bits = max(counts, key=counts.get)
+        # Pad with leading zeros if result is shorter than num_qubits
+        return raw_bits.zfill(num_qubits)
 
     def generate_secure_key(self, key_length=256, shots=1024):
         """
-        Generate a secure cryptographic key using quantum randomness
+        Generate a secure cryptographic key using quantum randomness.
+        This has been optimized to generate keys in larger chunks to improve
+        performance on resource-constrained environments like free cloud tiers.
         
         Args:
             key_length: Length of key in bits (128, 256, 512, etc.)
@@ -136,15 +140,17 @@ class QuantumRandomGenerator:
         Returns:
             dict: Secure key in multiple formats with quantum data
         """
-        # Generate multiple quantum random bits using lightweight method
+        # Optimized: Generate bits in larger chunks for better performance.
+        # This reduces the number of separate quantum simulations.
         all_bits = []
-        chunks = (key_length + 7) // 8  # Number of 8-bit chunks needed
+        chunk_size = 16  # Using 16-bit chunks is more efficient than 8-bit
+        chunks = (key_length + chunk_size - 1) // chunk_size
         
         for _ in range(chunks):
-            bits = self._generate_raw_bits(num_qubits=8, shots=shots)
+            bits = self._generate_raw_bits(num_qubits=chunk_size, shots=shots)
             all_bits.append(bits)
         
-        # Combine all bits
+        # Combine all bits and truncate to the exact key_length
         full_binary = ''.join(all_bits)[:key_length]
         
         # Convert to different formats
@@ -153,11 +159,11 @@ class QuantumRandomGenerator:
         # Generate SHA-256 hash of the key for verification
         key_hash = hashlib.sha256(full_binary.encode()).hexdigest()
         
-        # Final circuit for visualization (8 qubits)
-        qc = QuantumCircuit(8, 8)
-        for i in range(8):
+        # Final circuit for visualization (shows a representative chunk)
+        qc = QuantumCircuit(chunk_size, chunk_size)
+        for i in range(chunk_size):
             qc.h(i)
-        qc.measure(range(8), range(8))
+        qc.measure(range(chunk_size), range(chunk_size))
         circuit_diagram = qc.draw('text', fold=-1)
         
         return {
