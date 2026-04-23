@@ -320,10 +320,14 @@ class QuantumKeyQualityClassifier:
             confidence = float(np.max(probabilities))
             predicted_class = 1 if probability_good >= float(self.decision_threshold) else 0
 
+        entropy_component = float(np.clip(entropy_score, 0.0, 1.0))
+        quality_score = (0.70 * entropy_component) + (0.30 * probability_good)
+
         return {
             "prediction": "good" if predicted_class == 1 else "bad",
             "confidence": round(confidence, 4),
             "probability_good": round(probability_good, 4),
+            "quality_score": round(float(np.clip(quality_score, 0.0, 1.0)), 4),
             "decision_threshold": round(float(self.decision_threshold), 4),
             "model_version": self.metadata.get("model_version", "v1"),
             "generated_at": datetime.now(timezone.utc).isoformat(),

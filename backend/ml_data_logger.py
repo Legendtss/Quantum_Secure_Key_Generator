@@ -121,11 +121,13 @@ class QuantumDataLogger:
         if shannon_entropy is None:
             shannon_entropy = nested_shannon.get('entropy', None)
         if entropy_score is None:
-            overall_score = entropy_result.get('overall_score', None)
-            if overall_score is not None:
-                entropy_score = float(overall_score) / 100.0
-            elif shannon_entropy is not None:
+            # Prefer entropy-based signal over pass/fail aggregate score.
+            if shannon_entropy is not None:
                 entropy_score = shannon_entropy
+            else:
+                overall_score = entropy_result.get('overall_score', None)
+                if overall_score is not None:
+                    entropy_score = float(overall_score) / 100.0
         if min_entropy is None:
             min_entropy = shannon_entropy
 

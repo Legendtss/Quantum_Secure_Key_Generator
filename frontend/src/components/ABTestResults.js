@@ -53,6 +53,33 @@ function ABTestResults() {
         <button type="button" onClick={fetchResults}>Refresh</button>
       </header>
 
+      <section className="ab-description" aria-label="A/B testing details">
+        <article>
+          <h3>Experiment Design</h3>
+          <p>
+            Control runs use standard single-pass generation. Treated runs enable ML correction, allowing
+            controlled retries before selecting the best candidate. This isolates correction impact from core
+            generator behavior.
+          </p>
+        </article>
+        <article>
+          <h3>Metric Meaning</h3>
+          <ul>
+            <li><strong>Good Quality:</strong> percentage of final keys classified as good.</li>
+            <li><strong>Avg Entropy:</strong> average randomness score of selected final keys.</li>
+            <li><strong>Avg Attempts:</strong> average retries used in treated sessions.</li>
+            <li><strong>Latency Cost:</strong> time overhead introduced by correction flow.</li>
+          </ul>
+        </article>
+        <article>
+          <h3>Decision Rule</h3>
+          <p>
+            Prefer ML correction when entropy gain remains positive while latency cost stays acceptable for your
+            deployment target. A positive ROI indicates correction is yielding meaningful quality benefit.
+          </p>
+        </article>
+      </section>
+
       {error && <div className="ab-error">{error}</div>}
 
       {results && (

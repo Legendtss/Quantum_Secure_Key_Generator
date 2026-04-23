@@ -61,6 +61,32 @@ function MLMetricsDashboard() {
         <button type="button" onClick={fetchMetrics}>Refresh</button>
       </header>
 
+      <section className="ml-dashboard-description" aria-label="ML dashboard guide">
+        <article>
+          <h3>Purpose</h3>
+          <p>
+            This dashboard summarizes whether your ML correction pipeline is delivering measurable benefit in
+            production-like usage, not just model-level accuracy on training data.
+          </p>
+        </article>
+        <article>
+          <h3>What To Monitor</h3>
+          <ul>
+            <li><strong>Entropy Improvement:</strong> gain in randomness quality against baseline runs.</li>
+            <li><strong>Latency Cost:</strong> extra time spent due to correction retries.</li>
+            <li><strong>ROI Ratio:</strong> quality gain per unit of latency overhead.</li>
+            <li><strong>Correction Rate:</strong> how often treated flow is being used.</li>
+          </ul>
+        </article>
+        <article>
+          <h3>How To Use It</h3>
+          <p>
+            Use this panel after batch test runs. Healthy behavior usually means positive entropy improvement,
+            controlled latency overhead, and stable average attempts near your configured limits.
+          </p>
+        </article>
+      </section>
+
       {error && <div className="ml-dashboard-error">{error}</div>}
 
       <div className="ml-dashboard-grid">

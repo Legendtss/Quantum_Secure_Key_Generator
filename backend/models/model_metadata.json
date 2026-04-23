@@ -1,5 +1,5 @@
 {
-  "training_date": "2026-04-23T19:59:33.249896+00:00",
+  "training_date": "2026-04-23T20:09:41.814562+00:00",
   "training_samples": 1000,
   "accuracy": 0.905,
   "precision_bad": 0.9243697478991597,
@@ -9,7 +9,7 @@
   "cross_val_mean": 0.9109999999999999,
   "cross_val_std": 0.013564659966250548,
   "model_size_mb": 0.4608,
-  "scaler_size_mb": 0.0011,
+  "scaler_size_mb": 0.001,
   "feature_names": [
     "generation_time_ms",
     "shots_used",

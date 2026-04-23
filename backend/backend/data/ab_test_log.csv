@@ -1,0 +1,4 @@
+timestamp,session_id,variant,attempt,selected_final,quality_prediction,confidence,entropy_score,generation_time_ms,correction_applied,key_length,shots
+2026-04-23T16:36:03.108107+00:00,0c8827ad-c60d-45de-b11b-edf672be71cb,treated,1,False,bad,1.0,1.0,561.14,False,128,64
+2026-04-23T16:36:03.161957+00:00,0c8827ad-c60d-45de-b11b-edf672be71cb,treated,2,False,bad,1.0,1.0,18.14,True,128,64
+2026-04-23T16:36:03.163196+00:00,0c8827ad-c60d-45de-b11b-edf672be71cb,treated,1,True,bad,1.0,1.0,561.14,True,128,64

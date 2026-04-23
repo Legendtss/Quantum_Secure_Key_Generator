@@ -18,6 +18,44 @@
   color: #97abd4;
 }
 
+.ml-description-grid {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.ml-description-card {
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 10px;
+  background: rgba(14, 24, 52, 0.58);
+  padding: 0.8rem;
+}
+
+.ml-description-card h3 {
+  margin: 0;
+  font-size: 0.92rem;
+  color: #dce9ff;
+}
+
+.ml-description-card p,
+.ml-description-card li {
+  margin-top: 0.5rem;
+  color: #9fb0d9;
+  line-height: 1.45;
+  font-size: 0.85rem;
+}
+
+.ml-description-card ul,
+.ml-description-card ol {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.ml-description-card strong {
+  color: #e6f3ff;
+}
+
 .ml-inline-note {
   margin-top: 0.8rem;
   color: #ffd57a;
@@ -133,6 +171,7 @@
 }
 
 @media (max-width: 920px) {
+  .ml-description-grid,
   .ml-results-top,
   .ml-key-grid {
     grid-template-columns: 1fr;

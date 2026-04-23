@@ -57,12 +57,22 @@ class QuantumKeyErrorCorrector:
     def _extract_entropy_score(self, entropy_result):
         if not isinstance(entropy_result, dict):
             return 0.0
+        tests = entropy_result.get("tests", {})
+        shannon = tests.get("shannon_entropy", {}).get("entropy", None)
+        block_entropy = tests.get("shannon_entropy", {}).get("block_entropy", None)
+
+        # Prefer entropy-based measurements for smoother ML quality separation.
+        if shannon is not None:
+            shannon_val = float(shannon)
+            if block_entropy is not None:
+                return max(0.0, min(1.0, (shannon_val * 0.8) + (float(block_entropy) * 0.2)))
+            return max(0.0, min(1.0, shannon_val))
+
         overall = entropy_result.get("overall_score", None)
         if overall is not None:
             return max(0.0, min(1.0, float(overall) / 100.0))
-        tests = entropy_result.get("tests", {})
-        shannon = tests.get("shannon_entropy", {}).get("entropy", 0.0)
-        return float(shannon) if shannon is not None else 0.0
+
+        return 0.0
 
     def _attempt_single_generation(self, key_generator, key_length, shots):
         """Generate one key and attach ML quality prediction and entropy metrics."""

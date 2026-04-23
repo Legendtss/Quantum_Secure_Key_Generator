@@ -83,6 +83,32 @@ ml_classifier = QuantumKeyQualityClassifier()
 ml_classifier_loaded = ml_classifier.load_model()
 ml_corrector = QuantumKeyErrorCorrector(ml_classifier, ml_logger)
 
+def _extract_entropy_score_for_ml(entropy_analysis):
+    """Map entropy analyzer output to a smooth 0..1 score for ML inference."""
+    if not isinstance(entropy_analysis, dict):
+        return None
+
+    tests = entropy_analysis.get('tests', {}) if isinstance(entropy_analysis.get('tests', {}), dict) else {}
+    shannon_test = tests.get('shannon_entropy', {}) if isinstance(tests.get('shannon_entropy', {}), dict) else {}
+    shannon = shannon_test.get('entropy', None)
+    block_entropy = shannon_test.get('block_entropy', None)
+
+    try:
+        if shannon is not None:
+            shannon_val = max(0.0, min(1.0, float(shannon)))
+            if block_entropy is not None:
+                block_val = max(0.0, min(1.0, float(block_entropy)))
+                return (0.8 * shannon_val) + (0.2 * block_val)
+            return shannon_val
+
+        overall_score = entropy_analysis.get('overall_score', None)
+        if overall_score is not None:
+            return max(0.0, min(1.0, float(overall_score) / 100.0))
+    except Exception:
+        return None
+
+    return None
+
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -253,14 +279,7 @@ def generate_key():
         entropy_score_for_ml = None
         try:
             entropy_analysis = entropy_analyzer.analyze_randomness(result.get('binary', ''))
-            if isinstance(entropy_analysis, dict):
-                if entropy_analysis.get('overall_score') is not None:
-                    entropy_score_for_ml = float(entropy_analysis.get('overall_score', 0.0)) / 100.0
-                else:
-                    tests = entropy_analysis.get('tests', {})
-                    shannon = tests.get('shannon_entropy', {}).get('entropy', None)
-                    if shannon is not None:
-                        entropy_score_for_ml = float(shannon)
+            entropy_score_for_ml = _extract_entropy_score_for_ml(entropy_analysis)
         except Exception:
             entropy_analysis = None
             entropy_score_for_ml = None

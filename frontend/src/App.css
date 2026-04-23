@@ -259,6 +259,7 @@ body {
   grid-template-columns: 320px minmax(0, 1fr);
   gap: 1.4rem;
   align-items: start;
+  padding-top: 0.6rem;
   max-width: 1400px;
   margin: 0 auto;
 }
@@ -412,7 +413,7 @@ body {
 .main-content {
   position: relative;
   z-index: 10;
-  padding: 0 var(--space-md) var(--space-xl);
+  padding: var(--space-sm) var(--space-md) var(--space-xl);
 }
 
 .content-wrapper {
