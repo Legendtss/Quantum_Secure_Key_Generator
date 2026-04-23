@@ -1,0 +1,14 @@
+[
+  {
+    "timestamp": "2026-04-23T15:02:04.210063Z",
+    "source": "test",
+    "bits_length": 16,
+    "entropy_score": 0.985,
+    "shannon_entropy": 0.98,
+    "min_entropy": 0.975,
+    "bit_distribution": 0.5,
+    "generation_time_ms": 125.5,
+    "shots_used": 256,
+    "num_qubits": 2
+  }
+]

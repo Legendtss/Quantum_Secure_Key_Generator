@@ -14,6 +14,7 @@ from ibm_quantum import ibm_manager, IBM_AVAILABLE
 import traceback
 import os
 import base64
+from ml_data_logger import QuantumDataLogger
 
 # Get the directory path for frontend build files
 FRONTEND_BUILD_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'build')
@@ -28,6 +29,9 @@ qrng = QuantumRandomGenerator()
 crypto_engine = CryptoEngine()
 entropy_analyzer = EntropyAnalyzer()
 comparator = RandomnessComparator(quantum_generator=qrng, ibm_manager=ibm_manager)
+
+# Initialize ML data logger for training data collection
+ml_logger = QuantumDataLogger()
 
 
 @app.route('/api/health', methods=['GET'])
@@ -169,6 +173,13 @@ def generate_key():
                 }), 400
         else:
             result = qrng.generate_secure_key(key_length=key_length, shots=shots)
+
+        # Log generation for ML training (non-blocking, silently fails)
+        try:
+            entropy_analysis = entropy_analyzer.analyze_randomness(result.get('binary', ''))
+            ml_logger.log_generation(result, entropy_analysis, source='quantum')
+        except Exception as ml_error:
+            pass  # Silently ignore logging errors - don't break key generation
 
         return jsonify({
             'success': True,
@@ -503,6 +514,30 @@ def compare_random():
 
         result = comparator.full_comparison(length=length, mode=mode, shots=shots)
 
+        # Log comparison data for ML training (non-blocking)
+        try:
+            quantum_data = result.get('quantum_generation', {})
+            classical_data = result.get('classical_generation', {})
+            comparison_stats = result.get('comparison', {})
+            
+            if quantum_data and not quantum_data.get('error'):
+                quantum_entropy = {
+                    'entropy_score': comparison_stats.get('quantum_randomness_quality', 0),
+                    'shannon_entropy': comparison_stats.get('quantum_shannon_entropy', 0),
+                    'min_entropy': comparison_stats.get('quantum_min_entropy', 0)
+                }
+                ml_logger.log_generation(quantum_data, quantum_entropy, source='quantum')
+            
+            if classical_data and not classical_data.get('error'):
+                classical_entropy = {
+                    'entropy_score': comparison_stats.get('classical_randomness_quality', 0),
+                    'shannon_entropy': comparison_stats.get('classical_shannon_entropy', 0),
+                    'min_entropy': comparison_stats.get('classical_min_entropy', 0)
+                }
+                ml_logger.log_generation(classical_data, classical_entropy, source='classical')
+        except Exception as ml_error:
+            pass  # Silently ignore logging errors - don't break comparison
+
         if result.get('quantum_generation', {}).get('error'):
             return jsonify({
                 'success': False,
@@ -764,6 +799,63 @@ def generate_bit_ibm():
         
     except Exception as e:
         print(f"Error in generate_bit_ibm: {traceback.format_exc()}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/ml/status', methods=['GET'])
+def ml_status():
+    """Get ML infrastructure status and dataset statistics"""
+    try:
+        stats = ml_logger.get_dataset_stats()
+        
+        from ml_data_collector import MLDataPreprocessor
+        preprocessor = MLDataPreprocessor()
+        quality = preprocessor.validate_data_quality()
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'dataset': stats,
+                'quality': quality,
+                'infrastructure': {
+                    'logging_active': True,
+                    'bootstrap_complete': quality.get('num_samples', 0) >= 500,
+                    'ready_for_training': quality.get('is_valid', False)
+                }
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/ml/init-bootstrap', methods=['POST'])
+def ml_init_bootstrap():
+    """Initialize ML infrastructure with bootstrap data (one-time setup)"""
+    try:
+        from ml_data_collector import MLDataPreprocessor
+        preprocessor = MLDataPreprocessor()
+        
+        success = preprocessor.generate_synthetic_data(num_samples=500)
+        
+        if success:
+            stats = ml_logger.get_dataset_stats()
+            return jsonify({
+                'success': True,
+                'message': 'Bootstrap data generated successfully',
+                'data': stats
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to generate bootstrap data'
+            }), 500
+    except Exception as e:
         return jsonify({
             'success': False,
             'error': str(e)
