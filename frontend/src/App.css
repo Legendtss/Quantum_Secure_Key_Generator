@@ -254,15 +254,18 @@ body {
 
 /* Workspace Layout */
 .workspace-grid {
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 1rem;
-  align-items: start;
+  position: relative;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .sidebar-nav {
-  position: sticky;
-  top: 1rem;
+  position: fixed;
+  top: clamp(9.8rem, 18vh, 12.4rem);
+  left: max(var(--space-md), calc((100vw - 1400px) / 2 + var(--space-md)));
+  width: 320px;
+  max-height: calc(100vh - clamp(10.8rem, 19vh, 13.4rem));
+  overflow-y: auto;
   border: 1px solid rgba(0, 212, 255, 0.24);
   border-radius: 14px;
   background: linear-gradient(160deg, rgba(12, 18, 45, 0.92), rgba(8, 12, 28, 0.95));
@@ -361,6 +364,9 @@ body {
 
 .content-panel {
   min-width: 0;
+  margin-left: calc(320px + 2.2rem);
+  padding-left: 1.2rem;
+  border-left: 1px solid rgba(0, 212, 255, 0.28);
 }
 
 .panel-headline {
@@ -442,10 +448,19 @@ body {
   }
 
   .workspace-grid {
-    grid-template-columns: 1fr;
+    max-width: none;
   }
 
   .sidebar-nav {
     position: static;
+    width: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .content-panel {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: 0;
   }
 }
