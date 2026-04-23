@@ -113,14 +113,22 @@ class QuantumRandomGenerator:
         Lightweight method to generate raw quantum random bits without visualizations.
         Used internally by generate_secure_key to avoid creating expensive
         histogram images for each chunk.
+        Optimized for hosted environments - skip transpile if not needed.
         """
         qc = QuantumCircuit(num_qubits, num_qubits)
         for i in range(num_qubits):
             qc.h(i)
         qc.measure(range(num_qubits), range(num_qubits))
         
-        compiled_circuit = transpile(qc, self.simulator)
-        result = self.simulator.run(compiled_circuit, shots=shots).result()
+        # Skip transpile for simple circuits to reduce overhead
+        # Direct simulation is faster for small, standard circuits
+        try:
+            result = self.simulator.run(qc, shots=shots).result()
+        except:
+            # Fallback to transpile if direct run fails
+            compiled_circuit = transpile(qc, self.simulator)
+            result = self.simulator.run(compiled_circuit, shots=shots).result()
+        
         counts = result.get_counts()
         
         raw_bits = max(counts, key=counts.get)

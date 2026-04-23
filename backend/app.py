@@ -462,6 +462,7 @@ def compare_random():
     
     Query parameters:
         length (optional): Number of bits to generate (default: 256, max: 1024)
+        shots (optional): Number of shots (default: 256 for hosted, max: 4000)
     
     Returns:
         JSON with comprehensive comparison data
@@ -469,7 +470,7 @@ def compare_random():
     try:
         length = request.args.get('length', 256, type=int)
         mode = request.args.get('mode', 'simulator', type=str)
-        shots = request.args.get('shots', 1024, type=int)
+        shots = request.args.get('shots', 256, type=int)  # Reduced from 1024 to 256 for hosted environments
         
         # Validate length
         if length < 32 or length > 1024:

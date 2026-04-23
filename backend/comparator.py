@@ -88,11 +88,18 @@ class RandomnessComparator:
 
         start_time = time.perf_counter()
 
+        # Optimize for hosted environments: use larger chunks and reduced shots for comparison
+        # This significantly reduces the number of quantum simulations needed
+        chunk_size = 16  # Increased from 8 to 16 qubits per chunk (fewer simulations)
         all_bits = []
-        chunks = (length + 7) // 8
+        chunks = (length + chunk_size - 1) // chunk_size
+        
+        # For comparison endpoint, reduce shots to fit in hosted environment timeout limits
+        # Default 1024 shots causes timeouts on free tiers; 256 shots still provides good randomness
+        optimized_shots = min(shots, 256) if shots == 1024 else shots
 
         for _ in range(chunks):
-            bits = self.quantum_generator._generate_raw_bits(num_qubits=8, shots=shots)
+            bits = self.quantum_generator._generate_raw_bits(num_qubits=chunk_size, shots=optimized_shots)
             all_bits.append(bits)
 
         binary = ''.join(all_bits)[:length]
@@ -109,7 +116,7 @@ class RandomnessComparator:
             'generation_time_ms': round(generation_time, 3),
             'bits_per_ms': round(length / generation_time, 2),
             'chunks_generated': chunks,
-            'shots_per_chunk': shots,
+            'shots_per_chunk': optimized_shots,
             'deterministic': False,
             'source': 'Quantum mechanical uncertainty (simulated)',
             'backend_type': 'simulator',

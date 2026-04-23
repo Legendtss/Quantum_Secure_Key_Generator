@@ -5,7 +5,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'https://quantum-secure-key-gen
 
 function ComparisonTable({ runtimeMode = 'simulator', ibmStatus = {} }) {
   const [bitLength, setBitLength] = useState(256);
-  const [shots, setShots] = useState(1024);
+  const [shots, setShots] = useState(256);  // Reduced from 1024 to 256 for hosted environments
   const [loading, setLoading] = useState(false);
   const [comparisonData, setComparisonData] = useState(null);
   const [error, setError] = useState(null);
