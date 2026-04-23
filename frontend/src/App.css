@@ -255,22 +255,34 @@ body {
 /* Workspace Layout */
 .workspace-grid {
   position: relative;
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 1.4rem;
+  align-items: start;
   max-width: 1400px;
   margin: 0 auto;
 }
 
 .sidebar-nav {
-  position: fixed;
-  top: clamp(9.8rem, 18vh, 12.4rem);
-  left: max(var(--space-md), calc((100vw - 1400px) / 2 + var(--space-md)));
-  width: 320px;
-  max-height: calc(100vh - clamp(10.8rem, 19vh, 13.4rem));
+  position: sticky;
+  top: var(--space-sm);
+  width: 100%;
+  max-height: calc(100vh - (var(--space-sm) * 2));
   overflow-y: auto;
   border: 1px solid rgba(0, 212, 255, 0.24);
   border-radius: 14px;
   background: linear-gradient(160deg, rgba(12, 18, 45, 0.92), rgba(8, 12, 28, 0.95));
   padding: 1rem;
   backdrop-filter: blur(10px);
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(0, 212, 255, 0.4);
+  border-radius: 999px;
 }
 
 .nav-group + .nav-group {
@@ -364,8 +376,8 @@ body {
 
 .content-panel {
   min-width: 0;
-  margin-left: calc(320px + 2.2rem);
-  padding-left: 1.2rem;
+  margin-left: 0;
+  padding-left: 1.1rem;
   border-left: 1px solid rgba(0, 212, 255, 0.28);
 }
 
