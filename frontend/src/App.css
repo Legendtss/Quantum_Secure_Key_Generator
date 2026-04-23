@@ -255,13 +255,11 @@ body {
 /* Workspace Layout */
 .workspace-grid {
   position: relative;
-  display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
-  gap: 2.2rem;
-  align-items: start;
+  display: block;
   padding-top: 0.6rem;
-  max-width: 1400px;
-  margin: 0 auto;
+  margin-left: 370px;
+  margin-right: auto;
+  max-width: calc(1400px - 370px);
 }
 
 .sidebar-nav {
@@ -380,8 +378,8 @@ body {
 .content-panel {
   min-width: 0;
   margin-left: 0;
-  padding-left: 1.8rem;
-  border-left: 1px solid rgba(0, 212, 255, 0.28);
+  padding-left: 0;
+  border-left: 0;
 }
 
 .panel-headline {
