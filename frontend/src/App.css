@@ -37,7 +37,7 @@ body {
   font-family: var(--font-mono);
   background: var(--quantum-dark);
   color: #ffffff;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 .app {
@@ -255,26 +255,26 @@ body {
 /* Workspace Layout */
 .workspace-grid {
   position: relative;
-  display: block;
-  padding-top: 0.6rem;
-  margin-left: 370px;
-  margin-right: auto;
-  max-width: calc(1400px - 370px);
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 2.2rem;
+  align-items: start;
+  padding-top: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .sidebar-nav {
-  position: fixed;
-  top: clamp(9.5rem, 18vh, 12rem);
-  left: max(var(--space-md), calc((100vw - 1400px) / 2 + var(--space-md)));
-  width: 320px;
-  max-height: calc(100vh - clamp(10.5rem, 19vh, 13rem));
+  position: sticky;
+  top: 1.5rem;
+  width: 100%;
+  max-height: calc(100vh - 3rem);
   overflow-y: auto;
   border: 1px solid rgba(0, 212, 255, 0.24);
   border-radius: 14px;
   background: linear-gradient(160deg, rgba(12, 18, 45, 0.92), rgba(8, 12, 28, 0.95));
   padding: 1rem;
   backdrop-filter: blur(10px);
-  z-index: 8;
 }
 
 .sidebar-nav::-webkit-scrollbar {
@@ -378,8 +378,8 @@ body {
 .content-panel {
   min-width: 0;
   margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
+  padding-left: 2rem;
+  border-left: 1px solid rgba(0, 212, 255, 0.28);
 }
 
 .panel-headline {
