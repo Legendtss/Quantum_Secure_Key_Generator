@@ -165,7 +165,7 @@ function App() {
       <header className="header">
         <div className="header-content">
           <div className="logo-section">
-            <div className="quantum-icon">QK</div>
+            <div className="quantum-icon">⚛</div>
             <div>
               <h1 className="title">Quantum Key Generator</h1>
               <p className="subtitle">Production-Grade Quantum Cryptographic Infrastructure</p>

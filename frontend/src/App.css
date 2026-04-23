@@ -140,14 +140,7 @@ body {
 }
 
 .quantum-icon {
-  font-size: 2.1rem;
-  font-family: var(--font-display);
-  font-weight: 900;
-  letter-spacing: 1px;
-  color: var(--quantum-primary);
-  border: 2px solid rgba(0, 212, 255, 0.45);
-  border-radius: 14px;
-  padding: 0.25rem 0.55rem;
+  font-size: 3.5rem;
   animation: spin 20s linear infinite;
   filter: drop-shadow(var(--glow));
 }
