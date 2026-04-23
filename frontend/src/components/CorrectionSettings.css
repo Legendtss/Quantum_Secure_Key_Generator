@@ -1,0 +1,46 @@
+.correction-settings {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 0.8rem;
+}
+
+.correction-settings label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  color: #dfe9ff;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.correction-settings input,
+.correction-settings select {
+  border: 1px solid rgba(0, 212, 255, 0.45);
+  border-radius: 8px;
+  background: rgba(5, 10, 25, 0.9);
+  color: #fff;
+  padding: 0.55rem 0.65rem;
+  font-family: var(--font-mono);
+}
+
+.correction-toggle {
+  justify-content: flex-end;
+  align-items: flex-start;
+  padding-top: 1.7rem;
+}
+
+.correction-toggle input {
+  margin-right: 0.45rem;
+}
+
+@media (max-width: 920px) {
+  .correction-settings {
+    grid-template-columns: repeat(2, minmax(160px, 1fr));
+  }
+
+  .correction-toggle {
+    padding-top: 0;
+    grid-column: 1 / -1;
+  }
+}

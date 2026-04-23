@@ -6,6 +6,9 @@ import QuantumInfo from './components/QuantumInfo';
 import EncryptionDemo from './components/EncryptionDemo';
 import EntropyAnalysis from './components/EntropyAnalysis';
 import ComparisonTable from './components/ComparisonTable';
+import MLKeyGenerator from './components/MLKeyGenerator';
+import MLMetricsDashboard from './components/MLMetricsDashboard';
+import ABTestResults from './components/ABTestResults';
 
 const API_URL = process.env.REACT_APP_API_URL || 'https://quantum-secure-key-generator.onrender.com/api';
 
@@ -162,7 +165,7 @@ function App() {
       <header className="header">
         <div className="header-content">
           <div className="logo-section">
-            <div className="quantum-icon">⚛</div>
+            <div className="quantum-icon">QK</div>
             <div>
               <h1 className="title">Quantum Key Generator</h1>
               <p className="subtitle">Production-Grade Quantum Cryptographic Infrastructure</p>
@@ -201,7 +204,7 @@ function App() {
                 type="button"
                 title="Toggle token visibility"
               >
-                {showToken ? '🙈' : '👁️'}
+                {showToken ? 'Hide' : 'Show'}
               </button>
               <button
                 className="runtime-mini-btn"
@@ -224,7 +227,7 @@ function App() {
                 <option value="" disabled>Select backend</option>
                 {sortedBackends.map((backend) => (
                   <option key={backend.name} value={backend.name}>
-                    {backend.name} • {backend.pending_jobs ?? 0} jobs
+                    {backend.name} - {backend.pending_jobs ?? 0} jobs
                   </option>
                 ))}
               </select>
@@ -245,7 +248,7 @@ function App() {
                 Disconnect
               </button>
               <span className="runtime-status ok">
-                Connected{ibmStatus.backend ? ` • ${ibmStatus.backend}` : ''}
+                Connected{ibmStatus.backend ? ` - ${ibmStatus.backend}` : ''}
               </span>
             </div>
           )}
@@ -256,28 +259,40 @@ function App() {
 
       <nav className="nav-tabs">
         <button className={`tab ${activeTab === 'bit' ? 'active' : ''}`} onClick={() => setActiveTab('bit')}>
-          <span className="tab-icon">🎲</span>
+          <span className="tab-icon">QB</span>
           Single Bit
         </button>
         <button className={`tab ${activeTab === 'key' ? 'active' : ''}`} onClick={() => setActiveTab('key')}>
-          <span className="tab-icon">🔐</span>
+          <span className="tab-icon">SK</span>
           Secure Key
         </button>
         <button className={`tab ${activeTab === 'encrypt' ? 'active' : ''}`} onClick={() => setActiveTab('encrypt')}>
-          <span className="tab-icon">🔒</span>
+          <span className="tab-icon">ENC</span>
           Encryption
         </button>
         <button className={`tab ${activeTab === 'entropy' ? 'active' : ''}`} onClick={() => setActiveTab('entropy')}>
-          <span className="tab-icon">📊</span>
+          <span className="tab-icon">ENT</span>
           Entropy
         </button>
         <button className={`tab ${activeTab === 'compare' ? 'active' : ''}`} onClick={() => setActiveTab('compare')}>
-          <span className="tab-icon">⚔️</span>
+          <span className="tab-icon">CMP</span>
           Compare
         </button>
         <button className={`tab ${activeTab === 'info' ? 'active' : ''}`} onClick={() => setActiveTab('info')}>
-          <span className="tab-icon">📚</span>
+          <span className="tab-icon">DOC</span>
           Learn
+        </button>
+        <button className={`tab ${activeTab === 'ml-gen' ? 'active' : ''}`} onClick={() => setActiveTab('ml-gen')}>
+          <span className="tab-icon">ML</span>
+          ML Generator
+        </button>
+        <button className={`tab ${activeTab === 'ml-dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('ml-dashboard')}>
+          <span className="tab-icon">MET</span>
+          ML Dashboard
+        </button>
+        <button className={`tab ${activeTab === 'ab-test' ? 'active' : ''}`} onClick={() => setActiveTab('ab-test')}>
+          <span className="tab-icon">AB</span>
+          AB Results
         </button>
       </nav>
 
@@ -289,11 +304,14 @@ function App() {
           {activeTab === 'entropy' && <EntropyAnalysis />}
           {activeTab === 'compare' && <ComparisonTable runtimeMode={runtimeMode} ibmStatus={ibmStatus} />}
           {activeTab === 'info' && <QuantumInfo />}
+          {activeTab === 'ml-gen' && <MLKeyGenerator runtimeMode={runtimeMode} ibmStatus={ibmStatus} />}
+          {activeTab === 'ml-dashboard' && <MLMetricsDashboard />}
+          {activeTab === 'ab-test' && <ABTestResults />}
         </div>
       </main>
 
       <footer className="footer">
-        <p>Built with Qiskit • AES-256 Encryption • IBM Quantum Support • NIST-Inspired Tests</p>
+        <p>Built with Qiskit, AES-256 Encryption, IBM Quantum Support, and ML Quality Correction</p>
       </footer>
     </div>
   );

@@ -4,7 +4,7 @@ Provides endpoints for quantum random number generation
 Enhanced with cryptography, entropy analysis, classical comparison, and IBM Quantum hardware
 """
 
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory, g
 from flask_cors import CORS
 from quantum_generator import QuantumRandomGenerator
 from crypto_engine import CryptoEngine
@@ -14,14 +14,58 @@ from ibm_quantum import ibm_manager, IBM_AVAILABLE
 import traceback
 import os
 import base64
+import time
 from ml_data_logger import QuantumDataLogger
 from ml_model_trainer import QuantumKeyQualityClassifier
+from ml_error_corrector import QuantumKeyErrorCorrector
+from monitoring_setup import (
+    HealthCheck,
+    alert_manager,
+    performance_monitor,
+    production_logger,
+)
 
 # Get the directory path for frontend build files
 FRONTEND_BUILD_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'build')
 
 app = Flask(__name__, static_folder=FRONTEND_BUILD_DIR, static_url_path='')
 CORS(app)  # Enable CORS for frontend communication
+
+
+@app.before_request
+def _begin_request_timing():
+    g.request_start = time.perf_counter()
+
+
+@app.after_request
+def _record_request_metrics(response):
+    try:
+        if request.path.startswith('/api/'):
+            start = getattr(g, 'request_start', None)
+            duration_ms = ((time.perf_counter() - start) * 1000.0) if start else 0.0
+            success = response.status_code < 400
+            performance_monitor.record_request(request.path, duration_ms, success=success)
+            production_logger.log_api_call(
+                endpoint=request.path,
+                method=request.method,
+                status_code=response.status_code,
+                duration_ms=duration_ms,
+            )
+
+            snapshot = performance_monitor.get_metrics()
+            alert_manager.check_error_rate(
+                snapshot.get('total_errors', 0),
+                snapshot.get('total_requests', 0),
+            )
+            alert_manager.check_response_time(snapshot.get('avg_response_time_ms', 0.0))
+    except Exception as exc:
+        production_logger.log_error(
+            error_type=type(exc).__name__,
+            error_message=str(exc),
+            traceback_str=traceback.format_exc(),
+            endpoint='/internal/request-metrics',
+        )
+    return response
 
 # Initialize quantum generator
 qrng = QuantumRandomGenerator()
@@ -37,6 +81,7 @@ ml_logger = QuantumDataLogger()
 # Initialize ML classifier (optional enhancement)
 ml_classifier = QuantumKeyQualityClassifier()
 ml_classifier_loaded = ml_classifier.load_model()
+ml_corrector = QuantumKeyErrorCorrector(ml_classifier, ml_logger)
 
 
 @app.route('/api/health', methods=['GET'])
@@ -138,6 +183,8 @@ def generate_key():
     Request body:
         key_length (optional): Length in bits - 128, 256, or 512 (default: 256)
         shots (optional): Number of measurements (default: 1024)
+        enable_ml_correction (optional): Regenerate on bad ML quality (default: False)
+        max_attempts (optional): Max regeneration attempts when correction enabled (default: 3)
 
     Returns:
         JSON with secure key in binary and hex formats, plus quantum metadata
@@ -146,6 +193,8 @@ def generate_key():
         data = request.get_json() or {}
         key_length = data.get('key_length', 256)
         shots = data.get('shots', 1024)
+        enable_ml_correction = bool(data.get('enable_ml_correction', False))
+        max_attempts = data.get('max_attempts', 3)
 
         # Validate parameters
         valid_lengths = [128, 256, 512]
@@ -157,6 +206,11 @@ def generate_key():
         if not isinstance(shots, int) or shots < 1 or shots > 10000:
             return jsonify({
                 'error': 'shots must be an integer between 1 and 10000'
+            }), 400
+        
+        if not isinstance(max_attempts, int) or max_attempts < 1 or max_attempts > 10:
+            return jsonify({
+                'error': 'max_attempts must be an integer between 1 and 10'
             }), 400
 
         # If user is connected to IBM and has selected a backend, default to
@@ -176,8 +230,24 @@ def generate_key():
                     'chunk_failed': result.get('chunk_failed'),
                     'chunks_total': result.get('chunks_total')
                 }), 400
+            # For IBM mode, keep single-run behavior to avoid queue amplification.
+            if enable_ml_correction:
+                result['ml_correction_note'] = 'ML correction loop is only available for simulator mode'
         else:
-            result = qrng.generate_secure_key(key_length=key_length, shots=shots)
+            if enable_ml_correction and ml_classifier_loaded:
+                try:
+                    result = ml_corrector.generate_with_quality_improvement(
+                        key_generator=qrng,
+                        key_length=key_length,
+                        shots=shots,
+                        enable_correction=True,
+                        max_attempts=max_attempts
+                    )
+                except Exception as correction_error:
+                    print(f"ML correction failed, falling back to standard generation: {correction_error}")
+                    result = qrng.generate_secure_key(key_length=key_length, shots=shots)
+            else:
+                result = qrng.generate_secure_key(key_length=key_length, shots=shots)
 
         # Optional ML quality assessment (non-blocking)
         try:
@@ -942,6 +1012,136 @@ def ml_init_bootstrap():
         }), 500
 
 
+@app.route('/api/ml/generate-key-improved', methods=['POST'])
+def generate_key_improved():
+    """
+    Generate quantum key with automatic ML-based quality improvement.
+    """
+    try:
+        data = request.get_json() or {}
+        key_length = data.get('key_length', 256)
+        shots = data.get('shots', 1024)
+        max_attempts = data.get('max_attempts', 3)
+
+        if key_length not in [128, 256, 512]:
+            return jsonify({'success': False, 'error': 'key_length must be 128, 256, or 512'}), 400
+        if not isinstance(shots, int) or shots < 1 or shots > 10000:
+            return jsonify({'success': False, 'error': 'shots must be an integer between 1 and 10000'}), 400
+        if not isinstance(max_attempts, int) or max_attempts < 1 or max_attempts > 10:
+            return jsonify({'success': False, 'error': 'max_attempts must be an integer between 1 and 10'}), 400
+
+        if not ml_classifier_loaded:
+            return jsonify({
+                'success': False,
+                'error': 'ML model not trained yet',
+                'hint': 'Call /api/ml/train first'
+            }), 400
+
+        result = ml_corrector.generate_with_quality_improvement(
+            key_generator=qrng,
+            key_length=key_length,
+            shots=shots,
+            enable_correction=True,
+            max_attempts=max_attempts
+        )
+
+        return jsonify({'success': True, 'data': result})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/ml/ab-test-results', methods=['GET'])
+def get_ab_test_results():
+    """Get A/B test analysis for control vs ML-corrected generation."""
+    try:
+        results = ml_corrector.get_ab_test_results()
+        return jsonify({
+            'success': True,
+            'data': results
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/ml/correction-stats', methods=['GET'])
+def get_correction_stats():
+    """Get correction usage and impact statistics."""
+    try:
+        stats = ml_corrector.get_correction_stats()
+        return jsonify({
+            'success': True,
+            'data': stats
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/ml/improvement-summary', methods=['GET'])
+def ml_improvement_summary():
+    """Get summary of ML correction gain vs latency cost."""
+    try:
+        ab_results = ml_corrector.get_ab_test_results()
+        control = ab_results.get('control', {})
+        treated = ab_results.get('treated', {})
+
+        control_entropy = float(control.get('avg_entropy', 0.0) or 0.0)
+        treated_entropy = float(treated.get('avg_entropy', 0.0) or 0.0)
+        control_time = float(control.get('avg_time_ms', 0.0) or 0.0)
+        treated_time = float(treated.get('avg_time_ms', 0.0) or 0.0)
+
+        entropy_improvement = 0.0
+        if control_entropy > 0:
+            entropy_improvement = ((treated_entropy - control_entropy) / control_entropy) * 100.0
+
+        latency_increase = 0.0
+        if control_time > 0:
+            latency_increase = ((treated_time - control_time) / control_time) * 100.0
+
+        roi = entropy_improvement / max(abs(latency_increase), 1.0)
+        recommendation = 'Yes, use ML correction' if roi > 1 else 'Latency may outweigh benefit'
+
+        return jsonify({
+            'success': True,
+            'data': {
+                'entropy_improvement_percent': round(entropy_improvement, 2),
+                'latency_cost_percent': round(latency_increase, 2),
+                'roi_ratio': round(roi, 2),
+                'recommendation': recommendation,
+                'ab_results': ab_results
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/admin/system-health', methods=['GET'])
+def system_health():
+    """Comprehensive system health check for admin monitoring dashboards."""
+    try:
+        health = HealthCheck.full_system_health()
+        storage_usage = health.get('checks', {}).get('storage', {}).get('usage_percent', 0.0)
+        alert_manager.check_storage_usage(storage_usage)
+        return jsonify({
+            'success': True,
+            'data': health
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/admin/performance-metrics', methods=['GET'])
+def performance_metrics():
+    """Get cumulative API performance metrics collected in-process."""
+    try:
+        metrics = performance_monitor.get_metrics()
+        return jsonify({
+            'success': True,
+            'data': metrics
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_frontend(path):
@@ -978,6 +1178,9 @@ if __name__ == '__main__':
     print('  POST /api/analyze-entropy - Analyze randomness quality')
     print('  GET  /api/compare         - Classical vs Quantum comparison')
     print('  POST /api/generate-classical - Generate classical random bits')
+    print('\nMonitoring & Admin:')
+    print('  GET  /api/admin/system-health - Full system health snapshot')
+    print('  GET  /api/admin/performance-metrics - API performance metrics')
     print('\nIBM Quantum Hardware:')
     print('  GET  /api/ibm/status      - Check IBM connection status')
     print('  POST /api/ibm/connect     - Connect to IBM Quantum')

@@ -1,0 +1,130 @@
+.ab-panel {
+  background: linear-gradient(155deg, rgba(13, 19, 43, 0.95), rgba(7, 11, 27, 0.96));
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 14px;
+  padding: 1.5rem;
+}
+
+.ab-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.ab-head h2 {
+  margin: 0;
+  color: #eaf2ff;
+  font-family: var(--font-display);
+}
+
+.ab-head p {
+  margin-top: 0.4rem;
+  color: #9eb0d8;
+}
+
+.ab-head button {
+  border: 1px solid rgba(0, 212, 255, 0.5);
+  background: rgba(0, 212, 255, 0.1);
+  color: #dff7ff;
+  border-radius: 8px;
+  padding: 0.5rem 0.8rem;
+  cursor: pointer;
+}
+
+.ab-error {
+  margin-top: 0.9rem;
+  border: 1px solid rgba(255, 99, 132, 0.55);
+  background: rgba(255, 99, 132, 0.12);
+  color: #ffd8e2;
+  border-radius: 10px;
+  padding: 0.7rem;
+}
+
+.ab-columns {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem;
+}
+
+.ab-card {
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 10px;
+  background: rgba(14, 25, 52, 0.68);
+  padding: 0.85rem;
+}
+
+.ab-card.treated {
+  border-color: rgba(0, 255, 136, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(0, 255, 136, 0.16);
+}
+
+.ab-card h3 {
+  margin: 0 0 0.45rem;
+  color: #eaf2ff;
+}
+
+.ab-card dl {
+  margin: 0;
+}
+
+.ab-card dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.7rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px dashed rgba(150, 169, 214, 0.3);
+}
+
+.ab-card dl div:last-child {
+  border-bottom: 0;
+}
+
+.ab-card dt {
+  color: #97abd4;
+}
+
+.ab-card dd {
+  color: #ffffff;
+  margin: 0;
+  font-weight: 700;
+}
+
+.ab-improvement {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(140px, 1fr));
+  gap: 0.8rem;
+}
+
+.ab-improvement div {
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 10px;
+  background: rgba(17, 31, 66, 0.68);
+  padding: 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.ab-improvement span {
+  color: #9eb0d8;
+  font-size: 0.85rem;
+}
+
+.ab-improvement strong {
+  color: #eaf8ff;
+  font-family: var(--font-display);
+}
+
+@media (max-width: 920px) {
+  .ab-columns,
+  .ab-improvement {
+    grid-template-columns: 1fr;
+  }
+
+  .ab-head {
+    flex-direction: column;
+  }
+}

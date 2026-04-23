@@ -1,0 +1,58 @@
+.improvement-summary-card {
+  margin-top: 1rem;
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 10px;
+  background: rgba(15, 27, 58, 0.72);
+  padding: 0.9rem;
+}
+
+.improvement-summary-card h3 {
+  margin: 0 0 0.7rem;
+  color: #eaf2ff;
+}
+
+.improvement-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 0.65rem;
+}
+
+.improvement-grid div {
+  background: rgba(11, 21, 45, 0.8);
+  border: 1px solid rgba(0, 212, 255, 0.15);
+  border-radius: 8px;
+  padding: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.improvement-grid span {
+  color: #95a9d7;
+  font-size: 0.8rem;
+}
+
+.improvement-grid strong {
+  color: #ffffff;
+  font-family: var(--font-display);
+}
+
+.improvement-grid strong.positive {
+  color: #00ff88;
+}
+
+.improvement-grid strong.negative {
+  color: #ff8080;
+}
+
+.improvement-summary-card p {
+  margin: 0.8rem 0 0;
+  color: #cde5ff;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 920px) {
+  .improvement-grid {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+}

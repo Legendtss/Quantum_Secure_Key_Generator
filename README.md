@@ -367,6 +367,21 @@ This is an educational project. Suggestions for improvements:
 - Create additional visualizations
 - Improve performance with caching
 
+## 🛡️ Production Operations
+
+For production readiness and operations, refer to:
+
+- Deployment checklist: `backend/DEPLOYMENT_CHECKLIST.md`
+- User guide: `docs/USER_GUIDE.md`
+- Developer guide: `docs/DEVELOPER_GUIDE.md`
+- Operations runbook: `docs/RUNBOOK.md`
+- Success metrics/KPIs: `docs/SUCCESS_METRICS.md`
+
+Monitoring and admin endpoints:
+
+- `GET /api/admin/system-health`
+- `GET /api/admin/performance-metrics`
+
 ## 📜 License
 
 This project is for educational purposes. Feel free to use and modify.
