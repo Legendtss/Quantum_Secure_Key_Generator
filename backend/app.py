@@ -249,6 +249,22 @@ def generate_key():
             else:
                 result = qrng.generate_secure_key(key_length=key_length, shots=shots)
 
+        entropy_analysis = None
+        entropy_score_for_ml = None
+        try:
+            entropy_analysis = entropy_analyzer.analyze_randomness(result.get('binary', ''))
+            if isinstance(entropy_analysis, dict):
+                if entropy_analysis.get('overall_score') is not None:
+                    entropy_score_for_ml = float(entropy_analysis.get('overall_score', 0.0)) / 100.0
+                else:
+                    tests = entropy_analysis.get('tests', {})
+                    shannon = tests.get('shannon_entropy', {}).get('entropy', None)
+                    if shannon is not None:
+                        entropy_score_for_ml = float(shannon)
+        except Exception:
+            entropy_analysis = None
+            entropy_score_for_ml = None
+
         # Optional ML quality assessment (non-blocking)
         try:
             if ml_classifier_loaded and result.get('binary'):
@@ -258,14 +274,15 @@ def generate_key():
                     shots_used=shots,
                     num_qubits=max(1, key_length // 16),
                     bit_distribution=bit_distribution,
+                    entropy_score=entropy_score_for_ml,
                 )
         except Exception as ml_error:
             print(f"ML assessment failed (non-blocking): {ml_error}")
 
         # Log generation for ML training (non-blocking, silently fails)
         try:
-            entropy_analysis = entropy_analyzer.analyze_randomness(result.get('binary', ''))
-            ml_logger.log_generation(result, entropy_analysis, source='quantum')
+            if entropy_analysis is not None:
+                ml_logger.log_generation(result, entropy_analysis, source='quantum')
         except Exception as ml_error:
             pass  # Silently ignore logging errors - don't break key generation
 

@@ -15,7 +15,7 @@ class FakeQualityClassifier:
         self.model = object()
         self.scaler = object()
 
-    def predict_quality(self, generation_time_ms, shots_used, num_qubits, bit_distribution):
+    def predict_quality(self, generation_time_ms, shots_used, num_qubits, bit_distribution, entropy_score=None):
         if abs(bit_distribution - 0.5) <= 0.03:
             return {
                 "prediction": "good",

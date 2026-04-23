@@ -39,6 +39,7 @@ class TestMLModel(unittest.TestCase):
             shots_used=256,
             num_qubits=16,
             bit_distribution=0.5,
+            entropy_score=0.97,
         )
         self.assertIn(prediction["prediction"], ["good", "bad"])
         self.assertGreaterEqual(prediction["confidence"], 0.0)
@@ -52,8 +53,8 @@ class TestMLModel(unittest.TestCase):
         loaded = QuantumKeyQualityClassifier()
         self.assertTrue(loaded.load_model())
 
-        original = self.classifier.predict_quality(300.0, 256, 16, 0.52)
-        restored = loaded.predict_quality(300.0, 256, 16, 0.52)
+        original = self.classifier.predict_quality(300.0, 256, 16, 0.52, entropy_score=0.96)
+        restored = loaded.predict_quality(300.0, 256, 16, 0.52, entropy_score=0.96)
         self.assertEqual(original["prediction"], restored["prediction"])
 
     def test_model_size(self):
@@ -70,7 +71,7 @@ class TestMLModel(unittest.TestCase):
 
         start = time.perf_counter()
         for _ in range(100):
-            _ = self.classifier.predict_quality(250.0, 256, 16, 0.5)
+            _ = self.classifier.predict_quality(250.0, 256, 16, 0.5, entropy_score=0.97)
         avg_ms = ((time.perf_counter() - start) * 1000.0) / 100
         self.assertLess(avg_ms, 50.0)
 

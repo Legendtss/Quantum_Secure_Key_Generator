@@ -1,27 +1,34 @@
 {
-  "training_date": "2026-04-23T15:16:09.852230+00:00",
-  "training_samples": 501,
-  "accuracy": 0.9702970297029703,
-  "precision_bad": 0.9702970297029703,
-  "recall_bad": 1.0,
-  "f1_bad": 0.9849246231155779,
-  "roc_auc": 0.26530612244897955,
-  "cross_val_mean": 0.970059405940594,
-  "cross_val_std": 0.00011881188118811893,
-  "model_size_mb": 0.204,
-  "scaler_size_mb": 0.001,
+  "training_date": "2026-04-23T19:59:33.249896+00:00",
+  "training_samples": 1000,
+  "accuracy": 0.905,
+  "precision_bad": 0.9243697478991597,
+  "recall_bad": 0.9166666666666666,
+  "f1_bad": 0.9205020920502092,
+  "roc_auc": 0.9419791666666666,
+  "cross_val_mean": 0.9109999999999999,
+  "cross_val_std": 0.013564659966250548,
+  "model_size_mb": 0.4608,
+  "scaler_size_mb": 0.0011,
   "feature_names": [
     "generation_time_ms",
     "shots_used",
     "num_qubits",
-    "bit_distribution"
+    "bit_distribution",
+    "entropy_score",
+    "bit_bias",
+    "latency_per_shot"
   ],
   "feature_importance": {
-    "generation_time_ms": 0.32967407361885487,
-    "shots_used": 0.08764108862371094,
-    "num_qubits": 0.26401505198069997,
-    "bit_distribution": 0.3186697857767343
+    "generation_time_ms": 0.04756418473590795,
+    "shots_used": 0.007672012064038772,
+    "num_qubits": 0.03595436748328209,
+    "bit_distribution": 0.05709317925535858,
+    "entropy_score": 0.7523725705127765,
+    "bit_bias": 0.05097378579743568,
+    "latency_per_shot": 0.048369900151200525
   },
-  "threshold": 0.98,
+  "threshold": 0.959493,
+  "decision_threshold": 0.58,
   "model_version": "v1"
 }

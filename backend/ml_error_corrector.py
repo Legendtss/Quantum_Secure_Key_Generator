@@ -57,6 +57,9 @@ class QuantumKeyErrorCorrector:
     def _extract_entropy_score(self, entropy_result):
         if not isinstance(entropy_result, dict):
             return 0.0
+        overall = entropy_result.get("overall_score", None)
+        if overall is not None:
+            return max(0.0, min(1.0, float(overall) / 100.0))
         tests = entropy_result.get("tests", {})
         shannon = tests.get("shannon_entropy", {}).get("entropy", 0.0)
         return float(shannon) if shannon is not None else 0.0
@@ -101,6 +104,7 @@ class QuantumKeyErrorCorrector:
             shots_used=shots,
             num_qubits=max(1, key_length // 16),
             bit_distribution=bit_distribution,
+            entropy_score=entropy_score,
         )
 
         confidence = float(quality.get("confidence", 0.0) or 0.0)

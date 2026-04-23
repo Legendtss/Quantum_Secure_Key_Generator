@@ -63,10 +63,8 @@ class QuantumDataLogger:
                 
                 bits_length = len(bits_str)
                 
-                # Extract entropy metrics
-                entropy_score = entropy_result.get('entropy_score', 0)
-                shannon_entropy = entropy_result.get('shannon_entropy', 0)
-                min_entropy = entropy_result.get('min_entropy', 0)
+                # Extract entropy metrics from either flat or nested analyzer formats.
+                entropy_score, shannon_entropy, min_entropy = self._extract_entropy_metrics(entropy_result)
                 
                 # Calculate bit distribution (ratio of 1s)
                 ones_count = bits_str.count('1')
@@ -105,6 +103,36 @@ class QuantumDataLogger:
             # Log failures silently - don't break key generation
             print(f"[ML Logger] Non-blocking error: {e}")
             return False
+
+    def _extract_entropy_metrics(self, entropy_result):
+        """Normalize entropy analyzer output into flat score values for logging."""
+        if not isinstance(entropy_result, dict):
+            return 0.0, 0.0, 0.0
+
+        # Flat format support.
+        entropy_score = entropy_result.get('entropy_score', None)
+        shannon_entropy = entropy_result.get('shannon_entropy', None)
+        min_entropy = entropy_result.get('min_entropy', None)
+
+        # Nested format support from EntropyAnalyzer.analyze_randomness().
+        tests = entropy_result.get('tests', {}) if isinstance(entropy_result.get('tests', {}), dict) else {}
+        nested_shannon = tests.get('shannon_entropy', {}) if isinstance(tests.get('shannon_entropy', {}), dict) else {}
+
+        if shannon_entropy is None:
+            shannon_entropy = nested_shannon.get('entropy', None)
+        if entropy_score is None:
+            overall_score = entropy_result.get('overall_score', None)
+            if overall_score is not None:
+                entropy_score = float(overall_score) / 100.0
+            elif shannon_entropy is not None:
+                entropy_score = shannon_entropy
+        if min_entropy is None:
+            min_entropy = shannon_entropy
+
+        entropy_score = float(entropy_score or 0.0)
+        shannon_entropy = float(shannon_entropy or 0.0)
+        min_entropy = float(min_entropy or 0.0)
+        return entropy_score, shannon_entropy, min_entropy
     
     def _append_json_log(self, record):
         """Append to JSON log, keeping only last 1000 entries"""

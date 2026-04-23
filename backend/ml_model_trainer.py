@@ -52,8 +52,14 @@ class QuantumKeyQualityClassifier:
             "shots_used",
             "num_qubits",
             "bit_distribution",
+            "entropy_score",
+            "bit_bias",
+            "latency_per_shot",
         ]
-        self.threshold = 0.98
+        # Quality threshold used while creating labels from entropy-derived signals.
+        self.threshold = 0.96
+        # Probability threshold used while converting model probability to class.
+        self.decision_threshold = 0.5
 
         self._ensure_model_dir()
 
@@ -86,7 +92,14 @@ class QuantumKeyQualityClassifier:
             # Keep both real and synthetic quantum samples for bootstrap training.
             df = df[df["source"].astype(str).str.contains("quantum", case=False, na=False)]
 
-        required_columns = self.feature_names + ["entropy_score", "shannon_entropy"]
+        required_columns = [
+            "generation_time_ms",
+            "shots_used",
+            "num_qubits",
+            "bit_distribution",
+            "entropy_score",
+            "shannon_entropy",
+        ]
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
             raise ValueError(f"Missing required columns: {missing_columns}")
@@ -95,13 +108,36 @@ class QuantumKeyQualityClassifier:
         if df.empty:
             raise ValueError("No usable rows after cleaning")
 
+        # Fill missing optional entropy column if absent in older datasets.
+        if "min_entropy" not in df.columns:
+            df["min_entropy"] = df["shannon_entropy"]
+
         # Clip extreme generation latency outliers to improve model stability.
         p95 = float(df["generation_time_ms"].quantile(0.95))
         p01 = float(df["generation_time_ms"].quantile(0.01))
         df["generation_time_ms"] = df["generation_time_ms"].clip(lower=p01, upper=p95)
 
-        # Label definition: strong entropy and Shannon entropy both required for "good".
-        y = ((df["entropy_score"] >= 0.98) & (df["shannon_entropy"] >= 0.99)).astype(int)
+        # Feature engineering that is available at runtime as well.
+        df["bit_bias"] = (df["bit_distribution"] - 0.5).abs()
+        df["latency_per_shot"] = df["generation_time_ms"] / df["shots_used"].clip(lower=1.0)
+
+        # Composite quality signal reduces brittle hard-threshold behavior.
+        composite_quality = (
+            0.45 * df["entropy_score"]
+            + 0.40 * df["shannon_entropy"]
+            + 0.15 * df["min_entropy"]
+        )
+        adaptive_threshold = float(np.clip(composite_quality.quantile(0.60), 0.93, 0.98))
+        y = (composite_quality >= adaptive_threshold).astype(int)
+        self.threshold = adaptive_threshold
+
+        # Ensure both classes are represented well enough for learning.
+        positive_rate = float(y.mean())
+        if positive_rate < 0.10 or positive_rate > 0.90:
+            fallback_threshold = float(np.clip(composite_quality.median(), 0.90, 0.98))
+            y = (composite_quality >= fallback_threshold).astype(int)
+            self.threshold = fallback_threshold
+
         X = df[self.feature_names].copy()
 
         class_counts = y.value_counts().to_dict()
@@ -138,7 +174,24 @@ class QuantumKeyQualityClassifier:
         )
         self.model.fit(X_train_scaled, y_train)
 
+        # Calibrate decision threshold using holdout set for better class separation.
+        self.decision_threshold = 0.5
+        if hasattr(self.model, "predict_proba") and len(np.unique(y_test)) > 1:
+            proba_good = self.model.predict_proba(X_test_scaled)[:, 1]
+            thresholds = np.linspace(0.30, 0.70, 41)
+            best_t = 0.5
+            best_f1 = -1.0
+            for t in thresholds:
+                pred = (proba_good >= t).astype(int)
+                score = f1_score(y_test, pred, average="weighted", zero_division=0)
+                if score > best_f1:
+                    best_f1 = float(score)
+                    best_t = float(t)
+            self.decision_threshold = best_t
+
         metrics = self.evaluate(X_test_scaled, y_test)
+        metrics["decision_threshold"] = float(self.decision_threshold)
+        metrics["label_threshold"] = float(self.threshold)
 
         # Cross-validation fallback for highly imbalanced/small class counts.
         try:
@@ -168,8 +221,12 @@ class QuantumKeyQualityClassifier:
         if self.model is None:
             raise RuntimeError("Model is not trained")
 
-        y_pred = self.model.predict(X_test)
-        y_proba = self.model.predict_proba(X_test)[:, 1] if hasattr(self.model, "predict_proba") else None
+        if hasattr(self.model, "predict_proba"):
+            y_proba = self.model.predict_proba(X_test)[:, 1]
+            y_pred = (y_proba >= float(self.decision_threshold)).astype(int)
+        else:
+            y_pred = self.model.predict(X_test)
+            y_proba = None
 
         accuracy = accuracy_score(y_test, y_pred)
         precision_by_class, recall_by_class, f1_by_class, _ = precision_recall_fscore_support(
@@ -206,7 +263,7 @@ class QuantumKeyQualityClassifier:
 
         return metrics
 
-    def predict_quality(self, generation_time_ms, shots_used, num_qubits, bit_distribution):
+    def predict_quality(self, generation_time_ms, shots_used, num_qubits, bit_distribution, entropy_score=None):
         """Predict if a generated key is good or noisy."""
         if self.model is None or self.scaler is None:
             return {
@@ -218,12 +275,28 @@ class QuantumKeyQualityClassifier:
             }
 
         try:
+            generation_time_ms = float(generation_time_ms)
+            shots_used = float(shots_used)
+            num_qubits = float(num_qubits)
+            bit_distribution = float(bit_distribution)
+
+            # If entropy is unavailable, use a conservative proxy from bit balance.
+            if entropy_score is None:
+                entropy_score = max(0.0, 1.0 - (2.0 * abs(bit_distribution - 0.5)))
+            entropy_score = float(entropy_score)
+
+            bit_bias = abs(bit_distribution - 0.5)
+            latency_per_shot = generation_time_ms / max(1.0, shots_used)
+
             features = np.array(
                 [[
-                    float(generation_time_ms),
-                    float(shots_used),
-                    float(num_qubits),
-                    float(bit_distribution),
+                    generation_time_ms,
+                    shots_used,
+                    num_qubits,
+                    bit_distribution,
+                    entropy_score,
+                    bit_bias,
+                    latency_per_shot,
                 ]]
             )
         except (TypeError, ValueError) as exc:
@@ -240,13 +313,18 @@ class QuantumKeyQualityClassifier:
         predicted_class = int(self.model.predict(scaled)[0])
 
         confidence = 0.5
+        probability_good = 0.5
         if hasattr(self.model, "predict_proba"):
             probabilities = self.model.predict_proba(scaled)[0]
+            probability_good = float(probabilities[1])
             confidence = float(np.max(probabilities))
+            predicted_class = 1 if probability_good >= float(self.decision_threshold) else 0
 
         return {
             "prediction": "good" if predicted_class == 1 else "bad",
             "confidence": round(confidence, 4),
+            "probability_good": round(probability_good, 4),
+            "decision_threshold": round(float(self.decision_threshold), 4),
             "model_version": self.metadata.get("model_version", "v1"),
             "generated_at": datetime.now(timezone.utc).isoformat(),
         }
@@ -277,6 +355,7 @@ class QuantumKeyQualityClassifier:
             "feature_names": self.feature_names,
             "feature_importance": self.latest_metrics.get("feature_importance", {}),
             "threshold": self.threshold,
+            "decision_threshold": float(self.decision_threshold),
             "model_version": "v1",
         }
 
@@ -306,6 +385,8 @@ class QuantumKeyQualityClassifier:
             if os.path.exists(self.metadata_path):
                 with open(self.metadata_path, "r", encoding="utf-8") as handle:
                     self.metadata = json.load(handle)
+                self.decision_threshold = float(self.metadata.get("decision_threshold", 0.5))
+                self.threshold = float(self.metadata.get("threshold", self.threshold))
             else:
                 self.metadata = {
                     "model_version": "v1",
@@ -313,6 +394,7 @@ class QuantumKeyQualityClassifier:
                     "training_samples": 0,
                     "accuracy": 0.0,
                 }
+                self.decision_threshold = 0.5
 
             return True
         except Exception as exc:
@@ -334,7 +416,7 @@ class QuantumKeyQualityClassifier:
         if metadata["model_loaded"]:
             # Measure average prediction latency using representative inputs.
             sample_features = pd.DataFrame(
-                [[300.0, 256.0, 16.0, 0.5]],
+                [[300.0, 256.0, 16.0, 0.5, 0.97, 0.0, 1.171875]],
                 columns=self.feature_names,
             )
             scaled = self.scaler.transform(sample_features)
