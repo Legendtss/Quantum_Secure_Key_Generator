@@ -12,6 +12,46 @@ import ABTestResults from './components/ABTestResults';
 
 const API_URL = process.env.REACT_APP_API_URL || 'https://quantum-secure-key-generator.onrender.com/api';
 
+const NAV_SECTIONS = [
+  {
+    id: 'core',
+    title: 'Core Tools',
+    emoji: '🔐',
+    items: [
+      { key: 'bit', icon: 'BIT', label: 'Bit Simulator', hint: 'Single quantum bit generation' },
+      { key: 'key', icon: 'KEY', label: 'Key Generator', hint: 'Secure multi-bit key generation' },
+      { key: 'encrypt', icon: 'ENC', label: 'Encryption Suite', hint: 'Encrypt and decrypt data/files' },
+      { key: 'entropy', icon: 'RND', label: 'Randomness Test', hint: 'Entropy and statistical quality checks' },
+    ],
+  },
+  {
+    id: 'ml',
+    title: 'ML Workflow',
+    emoji: '🤖',
+    items: [
+      { key: 'ml-gen', icon: 'ML', label: 'ML Generator', hint: 'Generate with correction loop', primary: true },
+      { key: 'ml-dashboard', icon: 'MET', label: 'ML Dashboard', hint: 'Performance and ROI metrics' },
+      { key: 'ab-test', icon: 'AB', label: 'A/B Results', hint: 'Control vs treated comparison' },
+    ],
+  },
+  {
+    id: 'analysis',
+    title: 'Analysis',
+    emoji: '📊',
+    items: [
+      { key: 'compare', icon: 'CMP', label: 'Output Comparison', hint: 'Classical vs quantum quality' },
+    ],
+  },
+  {
+    id: 'learn',
+    title: 'Learn',
+    emoji: '📚',
+    items: [
+      { key: 'info', icon: 'DOC', label: 'Learning Center', hint: 'Concepts and documentation' },
+    ],
+  },
+];
+
 function App() {
   const [activeTab, setActiveTab] = useState('bit');
   const [runtimeMode, setRuntimeMode] = useState('simulator');
@@ -152,6 +192,17 @@ function App() {
     }
   };
 
+  const activeItem = useMemo(() => {
+    for (const section of NAV_SECTIONS) {
+      for (const item of section.items) {
+        if (item.key === activeTab) {
+          return { ...item, sectionTitle: section.title, sectionEmoji: section.emoji };
+        }
+      }
+    }
+    return null;
+  }, [activeTab]);
+
   return (
     <div className="app">
       <div className="quantum-bg">
@@ -257,56 +308,57 @@ function App() {
         </div>
       </header>
 
-      <nav className="nav-tabs">
-        <button className={`tab ${activeTab === 'bit' ? 'active' : ''}`} onClick={() => setActiveTab('bit')}>
-          <span className="tab-icon">QB</span>
-          Single Bit
-        </button>
-        <button className={`tab ${activeTab === 'key' ? 'active' : ''}`} onClick={() => setActiveTab('key')}>
-          <span className="tab-icon">SK</span>
-          Secure Key
-        </button>
-        <button className={`tab ${activeTab === 'encrypt' ? 'active' : ''}`} onClick={() => setActiveTab('encrypt')}>
-          <span className="tab-icon">ENC</span>
-          Encryption
-        </button>
-        <button className={`tab ${activeTab === 'entropy' ? 'active' : ''}`} onClick={() => setActiveTab('entropy')}>
-          <span className="tab-icon">ENT</span>
-          Entropy
-        </button>
-        <button className={`tab ${activeTab === 'compare' ? 'active' : ''}`} onClick={() => setActiveTab('compare')}>
-          <span className="tab-icon">CMP</span>
-          Compare
-        </button>
-        <button className={`tab ${activeTab === 'info' ? 'active' : ''}`} onClick={() => setActiveTab('info')}>
-          <span className="tab-icon">DOC</span>
-          Learn
-        </button>
-        <button className={`tab ${activeTab === 'ml-gen' ? 'active' : ''}`} onClick={() => setActiveTab('ml-gen')}>
-          <span className="tab-icon">ML</span>
-          ML Generator
-        </button>
-        <button className={`tab ${activeTab === 'ml-dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('ml-dashboard')}>
-          <span className="tab-icon">MET</span>
-          ML Dashboard
-        </button>
-        <button className={`tab ${activeTab === 'ab-test' ? 'active' : ''}`} onClick={() => setActiveTab('ab-test')}>
-          <span className="tab-icon">AB</span>
-          AB Results
-        </button>
-      </nav>
-
       <main className="main-content">
-        <div className="content-wrapper">
-          {activeTab === 'bit' && <QuantumBitGenerator runtimeMode={runtimeMode} ibmStatus={ibmStatus} />}
-          {activeTab === 'key' && <QuantumKeyGenerator runtimeMode={runtimeMode} ibmStatus={ibmStatus} />}
-          {activeTab === 'encrypt' && <EncryptionDemo />}
-          {activeTab === 'entropy' && <EntropyAnalysis />}
-          {activeTab === 'compare' && <ComparisonTable runtimeMode={runtimeMode} ibmStatus={ibmStatus} />}
-          {activeTab === 'info' && <QuantumInfo />}
-          {activeTab === 'ml-gen' && <MLKeyGenerator runtimeMode={runtimeMode} ibmStatus={ibmStatus} />}
-          {activeTab === 'ml-dashboard' && <MLMetricsDashboard />}
-          {activeTab === 'ab-test' && <ABTestResults />}
+        <div className="workspace-grid">
+          <aside className="sidebar-nav" aria-label="Tool navigation">
+            {NAV_SECTIONS.map((section) => (
+              <section className="nav-group" key={section.id}>
+                <h3 className="nav-group-title">
+                  <span>{section.emoji}</span>
+                  {section.title}
+                </h3>
+                <div className="nav-group-items">
+                  {section.items.map((item) => (
+                    <button
+                      key={item.key}
+                      className={`tab ${activeTab === item.key ? 'active' : ''} ${item.primary ? 'primary' : ''}`}
+                      onClick={() => setActiveTab(item.key)}
+                    >
+                      <span className="tab-icon">{item.icon}</span>
+                      <span className="tab-text-wrap">
+                        <span className="tab-label">{item.label}</span>
+                        <span className="tab-hint">{item.hint}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </aside>
+
+          <div className="content-panel">
+            {activeItem && (
+              <div className="panel-headline">
+                <div className="panel-headline-title">
+                  <span>{activeItem.sectionEmoji}</span>
+                  <h2>{activeItem.label}</h2>
+                </div>
+                <p>{activeItem.hint}</p>
+              </div>
+            )}
+
+            <div className="content-wrapper">
+              {activeTab === 'bit' && <QuantumBitGenerator runtimeMode={runtimeMode} ibmStatus={ibmStatus} />}
+              {activeTab === 'key' && <QuantumKeyGenerator runtimeMode={runtimeMode} ibmStatus={ibmStatus} />}
+              {activeTab === 'encrypt' && <EncryptionDemo />}
+              {activeTab === 'entropy' && <EntropyAnalysis />}
+              {activeTab === 'compare' && <ComparisonTable runtimeMode={runtimeMode} ibmStatus={ibmStatus} />}
+              {activeTab === 'info' && <QuantumInfo />}
+              {activeTab === 'ml-gen' && <MLKeyGenerator runtimeMode={runtimeMode} ibmStatus={ibmStatus} />}
+              {activeTab === 'ml-dashboard' && <MLMetricsDashboard />}
+              {activeTab === 'ab-test' && <ABTestResults />}
+            </div>
+          </div>
         </div>
       </main>
 
