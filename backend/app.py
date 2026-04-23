@@ -15,6 +15,7 @@ import traceback
 import os
 import base64
 from ml_data_logger import QuantumDataLogger
+from ml_model_trainer import QuantumKeyQualityClassifier
 
 # Get the directory path for frontend build files
 FRONTEND_BUILD_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'build')
@@ -32,6 +33,10 @@ comparator = RandomnessComparator(quantum_generator=qrng, ibm_manager=ibm_manage
 
 # Initialize ML data logger for training data collection
 ml_logger = QuantumDataLogger()
+
+# Initialize ML classifier (optional enhancement)
+ml_classifier = QuantumKeyQualityClassifier()
+ml_classifier_loaded = ml_classifier.load_model()
 
 
 @app.route('/api/health', methods=['GET'])
@@ -173,6 +178,19 @@ def generate_key():
                 }), 400
         else:
             result = qrng.generate_secure_key(key_length=key_length, shots=shots)
+
+        # Optional ML quality assessment (non-blocking)
+        try:
+            if ml_classifier_loaded and result.get('binary'):
+                bit_distribution = result['binary'].count('1') / max(1, len(result['binary']))
+                result['ml_quality_assessment'] = ml_classifier.predict_quality(
+                    generation_time_ms=result.get('generation_time_ms', 0),
+                    shots_used=shots,
+                    num_qubits=max(1, key_length // 16),
+                    bit_distribution=bit_distribution,
+                )
+        except Exception as ml_error:
+            print(f"ML assessment failed (non-blocking): {ml_error}")
 
         # Log generation for ML training (non-blocking, silently fails)
         try:
@@ -807,17 +825,37 @@ def generate_bit_ibm():
 
 @app.route('/api/ml/status', methods=['GET'])
 def ml_status():
-    """Get ML infrastructure status and dataset statistics"""
+    """Get ML model status, metadata, and dataset readiness."""
     try:
         stats = ml_logger.get_dataset_stats()
-        
+
         from ml_data_collector import MLDataPreprocessor
         preprocessor = MLDataPreprocessor()
         quality = preprocessor.validate_data_quality()
-        
+
+        if not ml_classifier_loaded:
+            return jsonify({
+                'success': True,
+                'data': {
+                    'model_loaded': False,
+                    'message': 'ML model not yet trained. Train with /api/ml/train',
+                    'dataset': stats,
+                    'quality': quality,
+                    'infrastructure': {
+                        'logging_active': True,
+                        'bootstrap_complete': quality.get('num_samples', 0) >= 500,
+                        'ready_for_training': quality.get('is_valid', False)
+                    }
+                }
+            })
+
+        metadata = ml_classifier.get_metadata()
+
         return jsonify({
             'success': True,
             'data': {
+                'model_loaded': True,
+                'model': metadata,
                 'dataset': stats,
                 'quality': quality,
                 'infrastructure': {
@@ -825,6 +863,48 @@ def ml_status():
                     'bootstrap_complete': quality.get('num_samples', 0) >= 500,
                     'ready_for_training': quality.get('is_valid', False)
                 }
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/ml/train', methods=['POST'])
+def train_ml_model():
+    """Train or retrain ML model from collected dataset."""
+    global ml_classifier_loaded
+
+    try:
+        data = request.get_json() or {}
+        force_retrain = data.get('force', False)
+
+        if ml_classifier_loaded and not force_retrain:
+            return jsonify({
+                'success': False,
+                'error': 'Model already trained. Use force:true to retrain'
+            }), 400
+
+        X, y, df = ml_classifier.prepare_data()
+        if len(df) < 500:
+            return jsonify({
+                'success': False,
+                'error': f'Need at least 500 samples, have {len(df)}'
+            }), 400
+
+        metrics = ml_classifier.train(X, y)
+        metadata = ml_classifier.save_model()
+        ml_classifier_loaded = True
+
+        return jsonify({
+            'success': True,
+            'data': {
+                'message': 'Model trained successfully',
+                'metrics': metrics,
+                'metadata': metadata,
+                'samples_used': len(df)
             }
         })
     except Exception as e:

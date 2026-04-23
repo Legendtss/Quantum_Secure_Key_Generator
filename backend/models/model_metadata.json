@@ -1,0 +1,27 @@
+{
+  "training_date": "2026-04-23T15:16:09.852230+00:00",
+  "training_samples": 501,
+  "accuracy": 0.9702970297029703,
+  "precision_bad": 0.9702970297029703,
+  "recall_bad": 1.0,
+  "f1_bad": 0.9849246231155779,
+  "roc_auc": 0.26530612244897955,
+  "cross_val_mean": 0.970059405940594,
+  "cross_val_std": 0.00011881188118811893,
+  "model_size_mb": 0.204,
+  "scaler_size_mb": 0.001,
+  "feature_names": [
+    "generation_time_ms",
+    "shots_used",
+    "num_qubits",
+    "bit_distribution"
+  ],
+  "feature_importance": {
+    "generation_time_ms": 0.32967407361885487,
+    "shots_used": 0.08764108862371094,
+    "num_qubits": 0.26401505198069997,
+    "bit_distribution": 0.3186697857767343
+  },
+  "threshold": 0.98,
+  "model_version": "v1"
+}
