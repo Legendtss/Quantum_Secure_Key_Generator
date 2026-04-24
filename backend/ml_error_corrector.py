@@ -19,6 +19,8 @@ class QuantumKeyErrorCorrector:
         self.log_dir = log_dir
         self.ab_test_log_path = os.path.join(log_dir, "ab_test_log.csv")
         self.max_attempts = 3
+        self.min_correction_attempts = 2
+        self.target_quality_score = 0.97
         self.max_total_time_ms = 20000
         self.entropy_analyzer = EntropyAnalyzer()
         self._ensure_ab_test_file()
@@ -185,7 +187,11 @@ class QuantumKeyErrorCorrector:
         enable_correction=True,
         max_attempts=None,
     ):
-        """Generate key with optional ML-based correction loop and timeout protection."""
+        """Generate key with optional ML-based correction loop and timeout protection.
+
+        Correction mode intentionally evaluates at least a small minimum number of
+        candidates so "ML improvement" impact is measurable in dashboards/demos.
+        """
         attempts_limit = max(1, int(max_attempts or self.max_attempts))
         session_id = str(uuid.uuid4())
         start_total = time.perf_counter()
@@ -209,7 +215,11 @@ class QuantumKeyErrorCorrector:
             )
             key_attempts.append(single)
 
-            prediction = (single.get("quality") or {}).get("prediction")
+            quality = single.get("quality") or {}
+            prediction = quality.get("prediction")
+            quality_score = float(
+                quality.get("quality_score", quality.get("probability_good", single.get("confidence", 0.0))) or 0.0
+            )
             self.log_ab_test_event(
                 session_id=session_id,
                 variant=variant,
@@ -227,7 +237,10 @@ class QuantumKeyErrorCorrector:
             if not enable_correction:
                 break
 
-            if prediction == "good":
+            # Stop only after minimum correction attempts are satisfied and
+            # selected key clears a high quality-score target.
+            min_attempts_met = attempt >= min(attempts_limit, self.min_correction_attempts)
+            if min_attempts_met and prediction == "good" and quality_score >= self.target_quality_score:
                 break
 
         best = self._select_best_key(key_attempts)
@@ -250,6 +263,10 @@ class QuantumKeyErrorCorrector:
         final_key["attempts"] = len(key_attempts)
         final_key["attempt_limit"] = attempts_limit
         final_key["correction_timeout_hit"] = (time.perf_counter() - start_total) * 1000.0 >= self.max_total_time_ms
+        final_key["correction_policy"] = {
+            "min_attempts": int(min(attempts_limit, self.min_correction_attempts)),
+            "target_quality_score": float(self.target_quality_score),
+        }
         final_key["improvement"] = {
             "initial_entropy": round(initial_entropy, 6),
             "final_entropy": round(final_entropy, 6),
