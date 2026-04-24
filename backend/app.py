@@ -58,6 +58,10 @@ def _record_request_metrics(response):
                 snapshot.get('total_requests', 0),
             )
             alert_manager.check_response_time(snapshot.get('avg_response_time_ms', 0.0))
+            if request.path.startswith('/api/ml/'):
+                response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+                response.headers['Pragma'] = 'no-cache'
+                response.headers['Expires'] = '0'
     except Exception as exc:
         production_logger.log_error(
             error_type=type(exc).__name__,

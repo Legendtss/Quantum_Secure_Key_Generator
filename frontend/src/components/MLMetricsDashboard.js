@@ -17,19 +17,68 @@ function MLMetricsDashboard() {
     setError('');
 
     try {
-      const [statusRes, summaryRes, statsRes] = await Promise.all([
-        fetch(`${API_URL}/ml/status`),
-        fetch(`${API_URL}/ml/improvement-summary`),
-        fetch(`${API_URL}/ml/correction-stats`),
+      const ts = Date.now();
+      const fetchOptions = { cache: 'no-store' };
+      const [statusRes, summaryRes, statsRes, abRes] = await Promise.all([
+        fetch(`${API_URL}/ml/status?t=${ts}`, fetchOptions),
+        fetch(`${API_URL}/ml/improvement-summary?t=${ts}`, fetchOptions),
+        fetch(`${API_URL}/ml/correction-stats?t=${ts}`, fetchOptions),
+        fetch(`${API_URL}/ml/ab-test-results?t=${ts}`, fetchOptions),
       ]);
 
       const statusJson = await statusRes.json();
       const summaryJson = await summaryRes.json();
       const statsJson = await statsRes.json();
+      const abJson = await abRes.json();
+
+      const abData = abJson?.success ? (abJson.data || {}) : {};
+      const control = abData.control || {};
+      const treated = abData.treated || {};
+      const improvement = abData.improvement || {};
+      const totalFromAB = Number(control.samples || 0) + Number(treated.samples || 0);
+
+      const summaryData = summaryJson?.success ? (summaryJson.data || {}) : {};
+      const statsData = statsJson?.success ? (statsJson.data || {}) : {};
+
+      const summaryLooksEmpty =
+        Number(summaryData?.entropy_improvement_percent || 0) === 0 &&
+        Number(summaryData?.p5_entropy_gain_percent || 0) === 0 &&
+        Number(summaryData?.tail_risk_reduction_percent || 0) === 0 &&
+        Number(summaryData?.latency_cost_percent || 0) === 0 &&
+        Number(summaryData?.roi_ratio || 0) === 0;
+
+      const statsLooksEmpty = Number(statsData?.total_keys_generated || 0) === 0;
+
+      let resolvedSummary = summaryData;
+      let resolvedStats = statsData;
+
+      // Fallback: derive dashboard values from raw A/B metrics if summary/stats endpoints are stale/empty.
+      if (totalFromAB > 0 && (summaryLooksEmpty || statsLooksEmpty)) {
+        resolvedSummary = {
+          entropy_improvement_percent: Number(improvement.entropy_gain_percent || 0),
+          p5_entropy_gain_percent: Number(improvement.p5_entropy_gain_percent || 0),
+          tail_risk_reduction_percent: Number(improvement.tail_risk_reduction_percent || 0),
+          latency_cost_percent: Number(improvement.latency_cost_percent || 0),
+          roi_ratio: Number(improvement.roi || 0),
+          recommendation: improvement.recommendation || 'No recommendation yet',
+          strict_ab_ready: Boolean(improvement.strict_ab_ready),
+        };
+        resolvedStats = {
+          total_keys_generated: totalFromAB,
+          keys_with_correction: Number(treated.samples || 0),
+          correction_rate: totalFromAB > 0 ? (Number(treated.samples || 0) / totalFromAB) * 100 : 0,
+          avg_attempts_per_key: Number(treated.avg_attempts || 0),
+          entropy_improvement_percent: Number(improvement.entropy_gain_percent || 0),
+          p5_entropy_gain_percent: Number(improvement.p5_entropy_gain_percent || 0),
+          tail_risk_reduction_percent: Number(improvement.tail_risk_reduction_percent || 0),
+          time_overhead_percent: Number(improvement.latency_cost_percent || 0),
+          roi: Number(improvement.roi || 0),
+        };
+      }
 
       setStatus(statusJson?.data || null);
-      setSummary(summaryJson?.success ? summaryJson.data : null);
-      setStats(statsJson?.success ? statsJson.data : null);
+      setSummary(resolvedSummary || null);
+      setStats(resolvedStats || null);
 
       if (!statusJson?.data?.model_loaded) {
         setError('ML model is not loaded yet. Train the model first to unlock correction analytics.');
