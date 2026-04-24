@@ -31,9 +31,6 @@ class QuantumKeyErrorCorrector:
 
     def _ensure_ab_test_file(self):
         os.makedirs(self.log_dir, exist_ok=True)
-        if os.path.exists(self.ab_test_log_path):
-            return
-
         headers = [
             "timestamp",
             "session_id",
@@ -50,6 +47,21 @@ class QuantumKeyErrorCorrector:
             "shots",
             "below_tail_threshold",
         ]
+
+        if os.path.exists(self.ab_test_log_path):
+            try:
+                with open(self.ab_test_log_path, "r", encoding="utf-8-sig") as handle:
+                    first_line = handle.readline().strip()
+                existing = [col.strip() for col in first_line.split(",")] if first_line else []
+                if existing == headers:
+                    return
+
+                backup_path = f"{self.ab_test_log_path}.legacy_{int(time.time())}.bak"
+                os.replace(self.ab_test_log_path, backup_path)
+                print(f"[ML Corrector] Archived legacy A/B log to {backup_path}")
+            except Exception as exc:
+                print(f"[ML Corrector] Failed header check, recreating A/B log: {exc}")
+
         with open(self.ab_test_log_path, "w", newline="", encoding="utf-8-sig") as handle:
             writer = csv.writer(handle)
             writer.writerow(headers)
@@ -190,11 +202,13 @@ class QuantumKeyErrorCorrector:
         shots,
         enable_correction=True,
         max_attempts=None,
+        time_budget_ms=None,
     ):
         """Generate key and optimize for highest entropy score using ML-guided ranking."""
         attempts_limit = max(1, int(max_attempts or self.max_attempts))
         session_id = str(uuid.uuid4())
         start_total = time.perf_counter()
+        effective_time_budget_ms = float(time_budget_ms if time_budget_ms is not None else self.max_total_time_ms)
         key_attempts = []
 
         classifier_available = self._classifier_available()
@@ -205,7 +219,7 @@ class QuantumKeyErrorCorrector:
 
         for attempt in range(1, attempts_limit + 1):
             elapsed_total_ms = (time.perf_counter() - start_total) * 1000.0
-            if elapsed_total_ms >= self.max_total_time_ms:
+            if elapsed_total_ms >= effective_time_budget_ms:
                 break
 
             single = self._attempt_single_generation(
@@ -258,7 +272,7 @@ class QuantumKeyErrorCorrector:
         final_key["correction_applied"] = bool(enable_correction and len(key_attempts) > 1)
         final_key["attempts"] = len(key_attempts)
         final_key["attempt_limit"] = attempts_limit
-        final_key["correction_timeout_hit"] = (time.perf_counter() - start_total) * 1000.0 >= self.max_total_time_ms
+        final_key["correction_timeout_hit"] = (time.perf_counter() - start_total) * 1000.0 >= effective_time_budget_ms
         final_key["ml_objective"] = "entropy_maximization"
         final_key["tail_threshold"] = float(self.entropy_tail_threshold)
         final_key["improvement"] = {
@@ -296,22 +310,31 @@ class QuantumKeyErrorCorrector:
         samples_per_variant=500,
         max_attempts=None,
         reset_log=False,
+        max_wall_time_ms=7000,
+        per_key_time_budget_ms=3000,
     ):
         """Run paired control/treated generation with identical settings."""
         samples = max(1, int(samples_per_variant))
         attempt_cap = max(1, int(max_attempts or self.max_attempts))
+        start = time.perf_counter()
+        executed_pairs = 0
 
         if reset_log and os.path.exists(self.ab_test_log_path):
             os.remove(self.ab_test_log_path)
             self._ensure_ab_test_file()
 
         for _ in range(samples):
+            elapsed_ms = (time.perf_counter() - start) * 1000.0
+            if elapsed_ms >= float(max_wall_time_ms):
+                break
+
             self.generate_with_quality_improvement(
                 key_generator=key_generator,
                 key_length=key_length,
                 shots=shots,
                 enable_correction=False,
                 max_attempts=1,
+                time_budget_ms=per_key_time_budget_ms,
             )
             self.generate_with_quality_improvement(
                 key_generator=key_generator,
@@ -319,15 +342,20 @@ class QuantumKeyErrorCorrector:
                 shots=shots,
                 enable_correction=True,
                 max_attempts=attempt_cap,
+                time_budget_ms=per_key_time_budget_ms,
             )
+            executed_pairs += 1
 
         results = self.get_ab_test_results()
         results["strict_ab_run"] = {
             "samples_per_variant_requested": samples,
+            "samples_per_variant_executed": int(executed_pairs),
             "settings": {
                 "key_length": int(key_length),
                 "shots": int(shots),
                 "max_attempts": int(attempt_cap),
+                "max_wall_time_ms": float(max_wall_time_ms),
+                "per_key_time_budget_ms": float(per_key_time_budget_ms),
             },
         }
         return results
@@ -367,7 +395,12 @@ class QuantumKeyErrorCorrector:
         if not os.path.exists(self.ab_test_log_path):
             return empty_payload
 
-        df = pd.read_csv(self.ab_test_log_path)
+        try:
+            df = pd.read_csv(self.ab_test_log_path)
+        except Exception as exc:
+            print(f"[ML Corrector] Failed reading A/B log, resetting file: {exc}")
+            self._ensure_ab_test_file()
+            return empty_payload
         if df.empty:
             return empty_payload
 

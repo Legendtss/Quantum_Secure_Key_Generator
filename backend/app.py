@@ -1088,14 +1088,17 @@ def generate_key_improved():
 
 @app.route('/api/ml/run-ab-test', methods=['POST'])
 def run_ab_test():
-    """Run strict paired A/B benchmark (control vs treated) with identical settings."""
+    """Run serverless-safe strict paired A/B benchmark in small batches."""
     try:
         data = request.get_json() or {}
         key_length = data.get('key_length', 256)
         shots = data.get('shots', 1024)
         max_attempts = data.get('max_attempts', 5)
         samples_per_variant = data.get('samples_per_variant', 500)
+        batch_size = data.get('batch_size', 3)
         reset_log = bool(data.get('reset_log', False))
+        max_wall_time_ms = data.get('max_wall_time_ms', 7000)
+        per_key_time_budget_ms = data.get('per_key_time_budget_ms', 3000)
 
         if key_length not in [128, 256, 512]:
             return jsonify({'success': False, 'error': 'key_length must be 128, 256, or 512'}), 400
@@ -1105,6 +1108,12 @@ def run_ab_test():
             return jsonify({'success': False, 'error': 'max_attempts must be an integer between 1 and 10'}), 400
         if not isinstance(samples_per_variant, int) or samples_per_variant < 10 or samples_per_variant > 2000:
             return jsonify({'success': False, 'error': 'samples_per_variant must be an integer between 10 and 2000'}), 400
+        if not isinstance(batch_size, int) or batch_size < 1 or batch_size > 20:
+            return jsonify({'success': False, 'error': 'batch_size must be an integer between 1 and 20'}), 400
+        if not isinstance(max_wall_time_ms, int) or max_wall_time_ms < 1000 or max_wall_time_ms > 10000:
+            return jsonify({'success': False, 'error': 'max_wall_time_ms must be an integer between 1000 and 10000'}), 400
+        if not isinstance(per_key_time_budget_ms, int) or per_key_time_budget_ms < 1000 or per_key_time_budget_ms > 10000:
+            return jsonify({'success': False, 'error': 'per_key_time_budget_ms must be an integer between 1000 and 10000'}), 400
         if not ml_classifier_loaded:
             return jsonify({
                 'success': False,
@@ -1112,15 +1121,43 @@ def run_ab_test():
                 'hint': 'Call /api/ml/train first'
             }), 400
 
+        requested_this_call = min(batch_size, samples_per_variant)
         results = ml_corrector.run_strict_ab_test(
             key_generator=qrng,
             key_length=key_length,
             shots=shots,
-            samples_per_variant=samples_per_variant,
+            samples_per_variant=requested_this_call,
             max_attempts=max_attempts,
-            reset_log=reset_log
+            reset_log=reset_log,
+            max_wall_time_ms=max_wall_time_ms,
+            per_key_time_budget_ms=per_key_time_budget_ms
         )
-        return jsonify({'success': True, 'data': results})
+
+        control_samples = int((results.get('control') or {}).get('samples', 0) or 0)
+        treated_samples = int((results.get('treated') or {}).get('samples', 0) or 0)
+        completed = min(control_samples, treated_samples)
+        remaining = max(0, int(samples_per_variant) - completed)
+        done = remaining == 0
+
+        return jsonify({
+            'success': True,
+            'data': {
+                'results': results,
+                'benchmark_progress': {
+                    'target_samples_per_variant': int(samples_per_variant),
+                    'completed_samples_per_variant': int(completed),
+                    'remaining_samples_per_variant': int(remaining),
+                    'done': bool(done),
+                    'batch_size_requested': int(batch_size),
+                    'batch_size_executed': int((results.get('strict_ab_run') or {}).get('samples_per_variant_executed', 0)),
+                },
+                'execution_profile': {
+                    'serverless_safe_mode': True,
+                    'max_wall_time_ms': int(max_wall_time_ms),
+                    'per_key_time_budget_ms': int(per_key_time_budget_ms),
+                }
+            }
+        })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 

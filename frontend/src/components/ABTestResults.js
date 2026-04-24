@@ -8,11 +8,13 @@ function ABTestResults() {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState('');
   const [results, setResults] = useState(null);
-  const [samplesPerVariant, setSamplesPerVariant] = useState(500);
-  const [keyLength, setKeyLength] = useState(256);
-  const [shots, setShots] = useState(1024);
-  const [maxAttempts, setMaxAttempts] = useState(5);
-  const [resetLog, setResetLog] = useState(false);
+  const [progress, setProgress] = useState(null);
+  const [samplesPerVariant, setSamplesPerVariant] = useState(100);
+  const [batchSize, setBatchSize] = useState(2);
+  const [keyLength, setKeyLength] = useState(128);
+  const [shots, setShots] = useState(256);
+  const [maxAttempts, setMaxAttempts] = useState(3);
+  const [resetLog, setResetLog] = useState(true);
 
   const fetchResults = async () => {
     setLoading(true);
@@ -37,27 +39,50 @@ function ABTestResults() {
   const runStrictAB = async () => {
     setRunning(true);
     setError('');
+    setProgress(null);
+
     try {
-      const response = await fetch(`${API_URL}/ml/run-ab-test`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          samples_per_variant: Number(samplesPerVariant),
-          key_length: Number(keyLength),
-          shots: Number(shots),
-          max_attempts: Number(maxAttempts),
-          reset_log: Boolean(resetLog),
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        setError(data.error || 'Failed to run strict A/B benchmark');
-        return;
+      const target = Number(samplesPerVariant);
+      let firstCall = true;
+      let done = false;
+      let safetyCounter = 0;
+
+      while (!done && safetyCounter < 1000) {
+        const response = await fetch(`${API_URL}/ml/run-ab-test`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            samples_per_variant: target,
+            batch_size: Number(batchSize),
+            key_length: Number(keyLength),
+            shots: Number(shots),
+            max_attempts: Number(maxAttempts),
+            reset_log: Boolean(firstCall && resetLog),
+            max_wall_time_ms: 7000,
+            per_key_time_budget_ms: 3000,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+          setError(data.error || 'Failed to run strict A/B benchmark');
+          return;
+        }
+
+        const payload = data.data || {};
+        setResults(payload.results || null);
+        setProgress(payload.benchmark_progress || null);
+
+        done = Boolean(payload?.benchmark_progress?.done);
+        firstCall = false;
+        safetyCounter += 1;
       }
-      setResults(data.data);
+
+      if (!done) {
+        setError('Benchmark paused for safety. Click "Run Strict A/B" again to continue from current progress.');
+      }
       setResetLog(false);
     } catch (err) {
-      setError('Failed to run strict A/B benchmark');
+      setError('Failed to connect to backend. Reduced batch mode is active; try lower shots/key length or rerun.');
     } finally {
       setRunning(false);
     }
@@ -104,6 +129,10 @@ function ABTestResults() {
             <input type="number" min="10" max="2000" value={samplesPerVariant} onChange={(e) => setSamplesPerVariant(e.target.value)} />
           </label>
           <label>
+            Batch Size (Serverless)
+            <input type="number" min="1" max="20" value={batchSize} onChange={(e) => setBatchSize(e.target.value)} />
+          </label>
+          <label>
             Key Length
             <select value={keyLength} onChange={(e) => setKeyLength(e.target.value)}>
               <option value={128}>128-bit</option>
@@ -130,6 +159,12 @@ function ABTestResults() {
       </section>
 
       {error && <div className="ab-error">{error}</div>}
+
+      {progress && (
+        <div className="ab-progress">
+          Progress: {progress.completed_samples_per_variant}/{progress.target_samples_per_variant} samples per variant
+        </div>
+      )}
 
       {results && (
         <>
