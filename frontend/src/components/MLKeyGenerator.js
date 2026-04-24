@@ -89,16 +89,16 @@ function MLKeyGenerator({ runtimeMode = 'simulator', ibmStatus = { connected: fa
     <section className="ml-key-generator-card">
       <header className="ml-key-generator-head">
         <h2>ML-Enhanced Key Generation</h2>
-        <p>Generate quantum keys with optional machine-learning quality correction and attempt controls.</p>
+        <p>Generate quantum keys with optional ML entropy optimization, retry controls, and tail-risk reduction.</p>
       </header>
 
       <section className="ml-description-grid" aria-label="ML generator details">
         <article className="ml-description-card">
           <h3>What This Feature Does</h3>
           <p>
-            This generator scores each produced key using the trained ML classifier and can automatically retry
-            generation when predicted quality is bad. Instead of accepting the first sample, the correction loop
-            searches for a better candidate within attempt and time limits.
+            This generator uses a trained entropy-regression model to estimate expected entropy and rank generated
+            candidates. Instead of stopping at the first sample, the correction loop can explore multiple attempts
+            and return the strongest entropy candidate within attempt and time limits.
           </p>
         </article>
 
@@ -106,19 +106,19 @@ function MLKeyGenerator({ runtimeMode = 'simulator', ibmStatus = { connected: fa
           <h3>Generation Flow</h3>
           <ol>
             <li>Generate an initial quantum key and compute core features.</li>
-            <li>Predict quality and confidence using the loaded ML model.</li>
-            <li>Retry when quality is bad until a good key or max attempts is reached.</li>
-            <li>Return the best candidate with entropy gain and attempt details.</li>
+            <li>Predict entropy score and expected gain using the loaded ML regressor.</li>
+            <li>Retry and rank candidates by measured entropy plus ML ranking score.</li>
+            <li>Return the best candidate with entropy gain, attempts, and correction policy details.</li>
           </ol>
         </article>
 
         <article className="ml-description-card">
           <h3>How To Read Results</h3>
           <ul>
-            <li><strong>Quality:</strong> Model prediction for final selected key.</li>
-            <li><strong>Confidence:</strong> Strength of model certainty for the prediction.</li>
-            <li><strong>Attempts:</strong> Number of generations used before final selection.</li>
-            <li><strong>Entropy Gain:</strong> Percent improvement from first attempt to final output.</li>
+            <li><strong>Quality Ring:</strong> Entropy-oriented ranking score for the selected key.</li>
+            <li><strong>Attempts:</strong> Number of candidates evaluated before final selection.</li>
+            <li><strong>Correction:</strong> Whether multi-attempt optimization was applied.</li>
+            <li><strong>Entropy Gain:</strong> Percent lift from first candidate to final selected key.</li>
           </ul>
         </article>
       </section>
