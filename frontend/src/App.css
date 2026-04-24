@@ -199,6 +199,39 @@ body {
   min-width: 230px;
 }
 
+.support-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: rgba(6, 10, 24, 0.55);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.support-modal-card {
+  position: relative;
+  min-width: 320px;
+  max-width: min(92vw, 430px);
+  padding: 1rem;
+  box-shadow: 0 0 0 1px rgba(0, 212, 255, 0.35), 0 24px 60px rgba(0, 0, 0, 0.55);
+  background: linear-gradient(155deg, rgba(10, 18, 46, 0.95), rgba(6, 12, 30, 0.95));
+}
+
+.support-close-btn {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.55rem;
+  border: 0;
+  background: transparent;
+  color: #9ed9ff;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
 .support-toggle-btn {
   padding: var(--space-xs) var(--space-md);
   background: rgba(0, 212, 255, 0.1);
@@ -220,7 +253,7 @@ body {
 }
 
 .support-qr {
-  width: 160px;
+  width: min(260px, 78vw);
   max-width: 100%;
   margin: 0.45rem 0;
   border-radius: 10px;
@@ -237,6 +270,7 @@ body {
 .support-actions {
   display: flex;
   gap: 0.45rem;
+  justify-content: center;
 }
 
 .support-btn {
@@ -254,6 +288,21 @@ body {
 .support-btn.pay {
   border-color: rgba(0, 255, 136, 0.5);
   background: rgba(0, 255, 136, 0.12);
+}
+
+.support-modal-card .support-title,
+.support-modal-card .support-upi {
+  text-align: center;
+}
+
+.support-modal-card .support-title {
+  font-size: 1rem;
+  margin-bottom: 0.3rem;
+}
+
+.support-modal-card .support-upi {
+  font-size: 0.95rem;
+  margin-top: 0.55rem;
 }
 
 .runtime-switch {
@@ -523,6 +572,11 @@ body {
 
   .support-card {
     width: 100%;
+    min-width: 0;
+  }
+
+  .support-modal-card {
+    width: min(94vw, 420px);
     min-width: 0;
   }
 
