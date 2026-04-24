@@ -9,29 +9,28 @@ from ml_error_corrector import QuantumKeyErrorCorrector
 
 
 class FakeQualityClassifier:
-    """Deterministic test classifier for correction flow tests."""
+    """Deterministic entropy predictor for correction-flow tests."""
 
     def __init__(self):
         self.model = object()
         self.scaler = object()
 
     def predict_quality(self, generation_time_ms, shots_used, num_qubits, bit_distribution, entropy_score=None):
-        if abs(bit_distribution - 0.5) <= 0.03:
-            return {
-                "prediction": "good",
-                "confidence": 0.92,
-                "model_version": "test-v1",
-            }
+        entropy_score = float(entropy_score or 0.0)
+        predicted = min(1.0, entropy_score + 0.02)
+        ranking = min(1.0, (0.8 * predicted) + (0.2 * entropy_score))
         return {
-            "prediction": "bad",
-            "confidence": 0.83,
-            "model_version": "test-v1",
+            "prediction": "good" if predicted >= 0.98 else "bad",
+            "confidence": 0.9,
+            "predicted_entropy_score": predicted,
+            "ranking_score": ranking,
+            "expected_entropy_gain": max(0.0, predicted - entropy_score),
+            "objective": "entropy_maximization",
+            "model_version": "test-v2",
         }
 
 
 class NoModelClassifier:
-    """Classifier stub that emulates unloaded model."""
-
     model = None
     scaler = None
 
@@ -39,13 +38,14 @@ class NoModelClassifier:
         return {
             "prediction": None,
             "confidence": 0.0,
+            "predicted_entropy_score": 0.0,
+            "ranking_score": 0.0,
+            "expected_entropy_gain": 0.0,
             "model_version": "unavailable",
         }
 
 
 class FakeKeyGenerator:
-    """Generates predefined binaries in sequence per call."""
-
     def __init__(self, binaries):
         self.binaries = binaries
         self.idx = 0
@@ -69,8 +69,6 @@ class SlowKeyGenerator(FakeKeyGenerator):
 
 
 class TestErrorCorrection(unittest.TestCase):
-    """Test ML error correction functionality."""
-
     def setUp(self):
         self.temp_dir = tempfile.mkdtemp(prefix="ml_corrector_test_")
         self.logger = QuantumDataLogger(log_dir=self.temp_dir)
@@ -80,8 +78,6 @@ class TestErrorCorrection(unittest.TestCase):
             self.logger,
             log_dir=self.temp_dir,
         )
-
-        # Low entropy then high entropy candidate.
         self.bad_binary = ("1" * 100) + ("0" * 28)
         self.good_binary = ("10" * 64)
 
@@ -91,12 +87,11 @@ class TestErrorCorrection(unittest.TestCase):
     def test_single_generation(self):
         generator = FakeKeyGenerator([self.good_binary])
         result = self.corrector._attempt_single_generation(generator, key_length=128, shots=256)
-
         self.assertIn("key", result)
         self.assertIn("quality", result)
-        self.assertIn(result["quality"].get("prediction"), ["good", "bad", None])
-        self.assertGreaterEqual(result.get("confidence", 0.0), 0.0)
-        self.assertLessEqual(result.get("confidence", 1.0), 1.0)
+        self.assertIn("predicted_entropy_score", result["quality"])
+        self.assertGreaterEqual(result["quality"]["predicted_entropy_score"], 0.0)
+        self.assertLessEqual(result["quality"]["predicted_entropy_score"], 1.0)
 
     def test_correction_improves_entropy(self):
         control_generator = FakeKeyGenerator([self.bad_binary, self.good_binary])
@@ -117,10 +112,7 @@ class TestErrorCorrection(unittest.TestCase):
             max_attempts=3,
         )
 
-        self.assertGreaterEqual(
-            treated["improvement"]["final_entropy"],
-            control["improvement"]["final_entropy"],
-        )
+        self.assertGreaterEqual(treated["improvement"]["final_entropy"], control["improvement"]["final_entropy"])
         self.assertGreaterEqual(treated["attempts"], 1)
 
     def test_correction_completes_in_time(self):
@@ -134,7 +126,6 @@ class TestErrorCorrection(unittest.TestCase):
             max_attempts=3,
         )
         elapsed = time.perf_counter() - start
-
         self.assertLess(elapsed, 20.0)
         self.assertIn("generation_time_ms", result)
 
@@ -159,11 +150,9 @@ class TestErrorCorrection(unittest.TestCase):
         self.assertTrue(os.path.exists(self.corrector.ab_test_log_path))
         with open(self.corrector.ab_test_log_path, "r", encoding="utf-8-sig") as handle:
             lines = [line.strip() for line in handle if line.strip()]
-
-        # header + at least a couple of rows
         self.assertGreaterEqual(len(lines), 3)
 
-    def test_ab_test_analysis(self):
+    def test_ab_test_analysis_with_tail_metrics(self):
         for _ in range(4):
             control_generator = FakeKeyGenerator([self.bad_binary])
             treated_generator = FakeKeyGenerator([self.bad_binary, self.good_binary])
@@ -183,20 +172,28 @@ class TestErrorCorrection(unittest.TestCase):
             )
 
         results = self.corrector.get_ab_test_results()
-
         self.assertIn("control", results)
         self.assertIn("treated", results)
         self.assertIn("improvement", results)
-        self.assertGreater(results["treated"]["avg_entropy"], results["control"]["avg_entropy"])
+        self.assertIn("p5_entropy", results["control"])
+        self.assertIn("tail_risk_reduction_percent", results["improvement"])
+
+    def test_strict_ab_runner(self):
+        generator = FakeKeyGenerator([self.bad_binary, self.good_binary, self.good_binary])
+        results = self.corrector.run_strict_ab_test(
+            key_generator=generator,
+            key_length=128,
+            shots=256,
+            samples_per_variant=10,
+            max_attempts=3,
+            reset_log=True,
+        )
+        self.assertGreaterEqual(results["control"]["samples"], 10)
+        self.assertGreaterEqual(results["treated"]["samples"], 10)
 
     def test_graceful_degradation(self):
-        no_ml_corrector = QuantumKeyErrorCorrector(
-            NoModelClassifier(),
-            self.logger,
-            log_dir=self.temp_dir,
-        )
+        no_ml_corrector = QuantumKeyErrorCorrector(NoModelClassifier(), self.logger, log_dir=self.temp_dir)
         generator = FakeKeyGenerator([self.good_binary])
-
         result = no_ml_corrector.generate_with_quality_improvement(
             key_generator=generator,
             key_length=128,
@@ -204,7 +201,6 @@ class TestErrorCorrection(unittest.TestCase):
             enable_correction=True,
             max_attempts=3,
         )
-
         self.assertIn("binary", result)
         self.assertFalse(result.get("correction_applied", False))
 

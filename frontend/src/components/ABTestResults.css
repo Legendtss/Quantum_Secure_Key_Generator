@@ -78,6 +78,68 @@
   padding: 0.7rem;
 }
 
+.ab-runner {
+  margin-top: 1rem;
+  border: 1px solid rgba(0, 212, 255, 0.22);
+  border-radius: 10px;
+  background: rgba(14, 25, 52, 0.62);
+  padding: 0.85rem;
+}
+
+.ab-runner h3 {
+  margin: 0;
+  color: #eaf2ff;
+}
+
+.ab-runner-grid {
+  margin-top: 0.6rem;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 0.65rem;
+}
+
+.ab-runner-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: #9eb0d8;
+  font-size: 0.82rem;
+}
+
+.ab-runner-grid input,
+.ab-runner-grid select {
+  background: rgba(8, 15, 36, 0.9);
+  color: #e8f4ff;
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  border-radius: 8px;
+  padding: 0.45rem 0.55rem;
+}
+
+.ab-checkbox {
+  justify-content: center;
+}
+
+.ab-checkbox input {
+  width: 16px;
+  height: 16px;
+  margin-bottom: 0.2rem;
+}
+
+.ab-run-btn {
+  margin-top: 0.7rem;
+  border: 1px solid rgba(0, 255, 136, 0.45);
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.18), rgba(0, 212, 255, 0.16));
+  color: #eaf8ff;
+  border-radius: 8px;
+  padding: 0.5rem 0.9rem;
+  cursor: pointer;
+}
+
+.ab-run-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 .ab-columns {
   margin-top: 1rem;
   display: grid;
@@ -131,7 +193,7 @@
 .ab-improvement {
   margin-top: 1rem;
   display: grid;
-  grid-template-columns: repeat(3, minmax(140px, 1fr));
+  grid-template-columns: repeat(5, minmax(130px, 1fr));
   gap: 0.8rem;
 }
 
@@ -155,11 +217,68 @@
   font-family: var(--font-display);
 }
 
+.ab-chart {
+  margin-top: 1rem;
+  border: 1px solid rgba(0, 212, 255, 0.18);
+  border-radius: 10px;
+  background: rgba(17, 31, 66, 0.68);
+  padding: 0.8rem;
+}
+
+.ab-chart h3 {
+  margin: 0 0 0.6rem;
+  color: #eaf2ff;
+}
+
+.ab-chart-row + .ab-chart-row {
+  margin-top: 0.55rem;
+}
+
+.ab-chart-row span {
+  display: block;
+  color: #9eb0d8;
+  font-size: 0.83rem;
+  margin-bottom: 0.25rem;
+}
+
+.ab-chart-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.32rem;
+}
+
+.ab-chart-bars .bar {
+  min-width: 120px;
+  border-radius: 999px;
+  padding: 0.2rem 0.5rem;
+  color: #fff;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.ab-chart-bars .bar.control {
+  background: rgba(0, 212, 255, 0.45);
+}
+
+.ab-chart-bars .bar.treated {
+  background: rgba(0, 255, 136, 0.45);
+}
+
+.ab-summary-note {
+  margin-top: 0.8rem;
+  color: #cde5ff;
+  font-size: 0.86rem;
+}
+
 @media (max-width: 920px) {
   .ab-description,
   .ab-columns,
   .ab-improvement {
     grid-template-columns: 1fr;
+  }
+
+  .ab-runner-grid {
+    grid-template-columns: 1fr 1fr;
   }
 
   .ab-head {

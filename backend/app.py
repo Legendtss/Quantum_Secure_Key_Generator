@@ -980,7 +980,7 @@ def ml_status():
 
 @app.route('/api/ml/train', methods=['POST'])
 def train_ml_model():
-    """Train or retrain ML model from collected dataset."""
+    """Train or retrain entropy-maximization ML model from collected dataset."""
     global ml_classifier_loaded
 
     try:
@@ -1007,7 +1007,7 @@ def train_ml_model():
         return jsonify({
             'success': True,
             'data': {
-                'message': 'Model trained successfully',
+                'message': 'Entropy-maximization model trained successfully',
                 'metrics': metrics,
                 'metadata': metadata,
                 'samples_used': len(df)
@@ -1051,7 +1051,7 @@ def ml_init_bootstrap():
 @app.route('/api/ml/generate-key-improved', methods=['POST'])
 def generate_key_improved():
     """
-    Generate quantum key with automatic ML-based quality improvement.
+    Generate quantum key with entropy-maximizing ML correction.
     """
     try:
         data = request.get_json() or {}
@@ -1086,9 +1086,48 @@ def generate_key_improved():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/ml/run-ab-test', methods=['POST'])
+def run_ab_test():
+    """Run strict paired A/B benchmark (control vs treated) with identical settings."""
+    try:
+        data = request.get_json() or {}
+        key_length = data.get('key_length', 256)
+        shots = data.get('shots', 1024)
+        max_attempts = data.get('max_attempts', 5)
+        samples_per_variant = data.get('samples_per_variant', 500)
+        reset_log = bool(data.get('reset_log', False))
+
+        if key_length not in [128, 256, 512]:
+            return jsonify({'success': False, 'error': 'key_length must be 128, 256, or 512'}), 400
+        if not isinstance(shots, int) or shots < 1 or shots > 10000:
+            return jsonify({'success': False, 'error': 'shots must be an integer between 1 and 10000'}), 400
+        if not isinstance(max_attempts, int) or max_attempts < 1 or max_attempts > 10:
+            return jsonify({'success': False, 'error': 'max_attempts must be an integer between 1 and 10'}), 400
+        if not isinstance(samples_per_variant, int) or samples_per_variant < 10 or samples_per_variant > 2000:
+            return jsonify({'success': False, 'error': 'samples_per_variant must be an integer between 10 and 2000'}), 400
+        if not ml_classifier_loaded:
+            return jsonify({
+                'success': False,
+                'error': 'ML model not trained yet',
+                'hint': 'Call /api/ml/train first'
+            }), 400
+
+        results = ml_corrector.run_strict_ab_test(
+            key_generator=qrng,
+            key_length=key_length,
+            shots=shots,
+            samples_per_variant=samples_per_variant,
+            max_attempts=max_attempts,
+            reset_log=reset_log
+        )
+        return jsonify({'success': True, 'data': results})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/ml/ab-test-results', methods=['GET'])
 def get_ab_test_results():
-    """Get A/B test analysis for control vs ML-corrected generation."""
+    """Get strict A/B test analysis with tail-risk metrics."""
     try:
         results = ml_corrector.get_ab_test_results()
         return jsonify({
@@ -1101,7 +1140,7 @@ def get_ab_test_results():
 
 @app.route('/api/ml/correction-stats', methods=['GET'])
 def get_correction_stats():
-    """Get correction usage and impact statistics."""
+    """Get correction usage and entropy/tail impact statistics."""
     try:
         stats = ml_corrector.get_correction_stats()
         return jsonify({
@@ -1114,35 +1153,23 @@ def get_correction_stats():
 
 @app.route('/api/ml/improvement-summary', methods=['GET'])
 def ml_improvement_summary():
-    """Get summary of ML correction gain vs latency cost."""
+    """Get summary of entropy gain vs latency and tail risk."""
     try:
         ab_results = ml_corrector.get_ab_test_results()
-        control = ab_results.get('control', {})
-        treated = ab_results.get('treated', {})
-
-        control_entropy = float(control.get('avg_entropy', 0.0) or 0.0)
-        treated_entropy = float(treated.get('avg_entropy', 0.0) or 0.0)
-        control_time = float(control.get('avg_time_ms', 0.0) or 0.0)
-        treated_time = float(treated.get('avg_time_ms', 0.0) or 0.0)
-
-        entropy_improvement = 0.0
-        if control_entropy > 0:
-            entropy_improvement = ((treated_entropy - control_entropy) / control_entropy) * 100.0
-
-        latency_increase = 0.0
-        if control_time > 0:
-            latency_increase = ((treated_time - control_time) / control_time) * 100.0
-
-        roi = entropy_improvement / max(abs(latency_increase), 1.0)
-        recommendation = 'Yes, use ML correction' if roi > 1 else 'Latency may outweigh benefit'
+        improvement = ab_results.get('improvement', {})
+        thresholds = ab_results.get('thresholds', {})
 
         return jsonify({
             'success': True,
             'data': {
-                'entropy_improvement_percent': round(entropy_improvement, 2),
-                'latency_cost_percent': round(latency_increase, 2),
-                'roi_ratio': round(roi, 2),
-                'recommendation': recommendation,
+                'entropy_improvement_percent': round(float(improvement.get('entropy_gain_percent', 0.0) or 0.0), 2),
+                'p5_entropy_gain_percent': round(float(improvement.get('p5_entropy_gain_percent', 0.0) or 0.0), 2),
+                'tail_risk_reduction_percent': round(float(improvement.get('tail_risk_reduction_percent', 0.0) or 0.0), 2),
+                'latency_cost_percent': round(float(improvement.get('latency_cost_percent', 0.0) or 0.0), 2),
+                'roi_ratio': round(float(improvement.get('roi', 0.0) or 0.0), 2),
+                'recommendation': improvement.get('recommendation', 'No recommendation yet'),
+                'strict_ab_ready': bool(improvement.get('strict_ab_ready', False)),
+                'tail_entropy_threshold': float(thresholds.get('tail_entropy_threshold', 0.95)),
                 'ab_results': ab_results
             }
         })

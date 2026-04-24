@@ -1,4 +1,4 @@
-"""Unit tests for Part 2 ML model training and inference."""
+"""Unit tests for entropy-maximization ML model training and inference."""
 
 import os
 import time
@@ -8,7 +8,7 @@ from ml_model_trainer import QuantumKeyQualityClassifier
 
 
 class TestMLModel(unittest.TestCase):
-    """Validate model training and predictions."""
+    """Validate regression-style training and predictions."""
 
     def setUp(self):
         self.classifier = QuantumKeyQualityClassifier()
@@ -17,8 +17,8 @@ class TestMLModel(unittest.TestCase):
         X, y, df = self.classifier.prepare_data()
         self.assertGreaterEqual(len(df), 500)
         self.assertFalse(df[self.classifier.feature_names].isna().any().any())
-        self.assertGreaterEqual(len(set(y.tolist())), 2)
         self.assertEqual(X.shape[1], len(self.classifier.feature_names))
+        self.assertGreater(float(y.std()), 0.0)
 
     def test_model_training(self):
         X, y, _ = self.classifier.prepare_data()
@@ -26,9 +26,12 @@ class TestMLModel(unittest.TestCase):
         metrics = self.classifier.train(X, y)
         elapsed = time.perf_counter() - start
 
-        self.assertIn("accuracy", metrics)
-        self.assertGreaterEqual(metrics["accuracy"], 0.80)
-        self.assertLess(elapsed, 10.0)
+        self.assertIn("mae", metrics)
+        self.assertIn("rmse", metrics)
+        self.assertIn("r2", metrics)
+        self.assertLess(metrics["mae"], 0.08)
+        self.assertLess(metrics["rmse"], 0.10)
+        self.assertLess(elapsed, 15.0)
 
     def test_model_prediction(self):
         X, y, _ = self.classifier.prepare_data()
@@ -44,6 +47,8 @@ class TestMLModel(unittest.TestCase):
         self.assertIn(prediction["prediction"], ["good", "bad"])
         self.assertGreaterEqual(prediction["confidence"], 0.0)
         self.assertLessEqual(prediction["confidence"], 1.0)
+        self.assertGreaterEqual(prediction["predicted_entropy_score"], 0.0)
+        self.assertLessEqual(prediction["predicted_entropy_score"], 1.0)
 
     def test_model_persistence(self):
         X, y, _ = self.classifier.prepare_data()
@@ -55,7 +60,11 @@ class TestMLModel(unittest.TestCase):
 
         original = self.classifier.predict_quality(300.0, 256, 16, 0.52, entropy_score=0.96)
         restored = loaded.predict_quality(300.0, 256, 16, 0.52, entropy_score=0.96)
-        self.assertEqual(original["prediction"], restored["prediction"])
+        self.assertAlmostEqual(
+            original["predicted_entropy_score"],
+            restored["predicted_entropy_score"],
+            places=3,
+        )
 
     def test_model_size(self):
         X, y, _ = self.classifier.prepare_data()

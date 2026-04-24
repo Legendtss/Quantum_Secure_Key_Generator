@@ -73,6 +73,8 @@ function MLMetricsDashboard() {
           <h3>What To Monitor</h3>
           <ul>
             <li><strong>Entropy Improvement:</strong> gain in randomness quality against baseline runs.</li>
+            <li><strong>P5 Entropy Gain:</strong> low-tail uplift for worst-case keys.</li>
+            <li><strong>Tail Risk Reduction:</strong> drop in keys below entropy threshold.</li>
             <li><strong>Latency Cost:</strong> extra time spent due to correction retries.</li>
             <li><strong>ROI Ratio:</strong> quality gain per unit of latency overhead.</li>
             <li><strong>Correction Rate:</strong> how often treated flow is being used.</li>
@@ -103,6 +105,18 @@ function MLMetricsDashboard() {
         </article>
 
         <article>
+          <h3>P5 Entropy Gain</h3>
+          <p className="value positive">{Number(summary?.p5_entropy_gain_percent || 0).toFixed(2)}%</p>
+          <small>Worst-case entropy uplift</small>
+        </article>
+
+        <article>
+          <h3>Tail Risk Reduction</h3>
+          <p className="value positive">{Number(summary?.tail_risk_reduction_percent || 0).toFixed(2)}%</p>
+          <small>Fewer keys below threshold</small>
+        </article>
+
+        <article>
           <h3>Latency Cost</h3>
           <p className="value">{Number(summary?.latency_cost_percent || 0).toFixed(2)}%</p>
           <small>ML correction overhead percentage</small>
@@ -124,6 +138,12 @@ function MLMetricsDashboard() {
           <h3>Average Attempts</h3>
           <p className="value">{Number(stats?.avg_attempts_per_key || 0).toFixed(2)}</p>
           <small>Higher means more retries before final key</small>
+        </article>
+
+        <article>
+          <h3>Strict A/B Readiness</h3>
+          <p className="value">{summary?.strict_ab_ready ? 'Ready' : 'Collecting'}</p>
+          <small>{summary?.strict_ab_ready ? '>=500 samples/variant reached' : 'Run strict benchmark to 500+ samples/variant'}</small>
         </article>
       </div>
 
