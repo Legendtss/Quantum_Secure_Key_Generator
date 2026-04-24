@@ -246,31 +246,6 @@ function App() {
             >
               Support This Project
             </button>
-            {supportExpanded && (
-              <div className="support-modal-overlay" onClick={() => setSupportExpanded(false)}>
-                <div className="support-card support-modal-card" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    type="button"
-                    className="support-close-btn"
-                    onClick={() => setSupportExpanded(false)}
-                    aria-label="Close support panel"
-                  >
-                    ×
-                  </button>
-                  <p className="support-title">Support This Project</p>
-                  <img src={upiQrCode} alt="UPI QR Code" className="support-qr" />
-                  <p className="support-upi">{SUPPORT_UPI_ID}</p>
-                  <div className="support-actions">
-                    <button type="button" className="support-btn" onClick={copySupportUpi}>
-                      {supportCopied ? 'Copied' : 'Copy UPI'}
-                    </button>
-                    <a className="support-btn pay" href={SUPPORT_UPI_LINK}>
-                      Pay via UPI
-                    </a>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
@@ -411,6 +386,32 @@ function App() {
       <footer className="footer">
         <p>Built with Qiskit, AES-256 Encryption, IBM Quantum Support, and ML Quality Correction</p>
       </footer>
+
+      {supportExpanded && (
+        <div className="support-modal-overlay" onClick={() => setSupportExpanded(false)}>
+          <div className="support-card support-modal-card" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="support-close-btn"
+              onClick={() => setSupportExpanded(false)}
+              aria-label="Close support panel"
+            >
+              ×
+            </button>
+            <p className="support-title">Support This Project</p>
+            <img src={upiQrCode} alt="UPI QR Code" className="support-qr" />
+            <p className="support-upi">{SUPPORT_UPI_ID}</p>
+            <div className="support-actions">
+              <button type="button" className="support-btn" onClick={copySupportUpi}>
+                {supportCopied ? 'Copied' : 'Copy UPI'}
+              </button>
+              <a className="support-btn pay" href={SUPPORT_UPI_LINK}>
+                Pay via UPI
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

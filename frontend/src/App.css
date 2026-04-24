@@ -201,20 +201,26 @@ body {
 
 .support-modal-overlay {
   position: fixed;
-  inset: 0;
-  z-index: 999;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 5000;
   background: rgba(6, 10, 24, 0.55);
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 100dvh;
   padding: 1rem;
 }
 
 .support-modal-card {
   position: relative;
   min-width: 320px;
-  max-width: min(92vw, 430px);
+  width: min(92vw, 430px);
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
   padding: 1rem;
   box-shadow: 0 0 0 1px rgba(0, 212, 255, 0.35), 0 24px 60px rgba(0, 0, 0, 0.55);
   background: linear-gradient(155deg, rgba(10, 18, 46, 0.95), rgba(6, 12, 30, 0.95));
