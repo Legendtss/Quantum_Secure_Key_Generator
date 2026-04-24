@@ -3,6 +3,7 @@
 import json
 import os
 import time
+import warnings
 from datetime import datetime, timezone
 
 import joblib
@@ -257,7 +258,15 @@ class QuantumKeyQualityClassifier:
 
         feature_df = pd.DataFrame(features, columns=self.feature_names)
         scaled = self.scaler.transform(feature_df)
-        predicted_entropy = float(np.clip(self.model.predict(scaled)[0], 0.0, 1.0))
+        # sklearn can emit a noisy parallel warning repeatedly during inference;
+        # suppress it locally so runtime logs stay readable.
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=r"`sklearn\.utils\.parallel\.delayed` should be used",
+                category=UserWarning,
+            )
+            predicted_entropy = float(np.clip(self.model.predict(scaled)[0], 0.0, 1.0))
 
         tree_std = 0.0
         if hasattr(self.model, "estimators_") and self.model.estimators_:
