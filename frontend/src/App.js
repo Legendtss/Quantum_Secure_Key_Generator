@@ -8,6 +8,7 @@ import EntropyAnalysis from './components/EntropyAnalysis';
 import ComparisonTable from './components/ComparisonTable';
 import MLKeyGenerator from './components/MLKeyGenerator';
 import ABTestResults from './components/ABTestResults';
+import upiQrCode from './assets/upi-qr-code.jpg';
 
 const API_URL = process.env.REACT_APP_API_URL || 'https://quantum-secure-key-generator.onrender.com/api';
 const SUPPORT_UPI_ID = 'shashankts2004@oksbi';
@@ -65,6 +66,7 @@ function App() {
   const [runtimeLoading, setRuntimeLoading] = useState(false);
   const [runtimeError, setRuntimeError] = useState(null);
   const [supportCopied, setSupportCopied] = useState(false);
+  const [supportExpanded, setSupportExpanded] = useState(false);
 
   const sortedBackends = useMemo(() => {
     const list = Array.isArray(ibmStatus.backends) ? [...ibmStatus.backends] : [];
@@ -237,18 +239,28 @@ function App() {
             <div className="header-badge">
               <span className="badge-text">Enhanced Edition</span>
             </div>
-            <div className="support-card">
-              <p className="support-title">Support This Project</p>
-              <p className="support-upi">{SUPPORT_UPI_ID}</p>
-              <div className="support-actions">
-                <button type="button" className="support-btn" onClick={copySupportUpi}>
-                  {supportCopied ? 'Copied' : 'Copy UPI'}
-                </button>
-                <a className="support-btn pay" href={SUPPORT_UPI_LINK}>
-                  Pay via UPI
-                </a>
+            <button
+              type="button"
+              className="support-toggle-btn"
+              onClick={() => setSupportExpanded((v) => !v)}
+            >
+              Support This Project
+            </button>
+            {supportExpanded && (
+              <div className="support-card">
+                <p className="support-title">Support This Project</p>
+                <img src={upiQrCode} alt="UPI QR Code" className="support-qr" />
+                <p className="support-upi">{SUPPORT_UPI_ID}</p>
+                <div className="support-actions">
+                  <button type="button" className="support-btn" onClick={copySupportUpi}>
+                    {supportCopied ? 'Copied' : 'Copy UPI'}
+                  </button>
+                  <a className="support-btn pay" href={SUPPORT_UPI_LINK}>
+                    Pay via UPI
+                  </a>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
