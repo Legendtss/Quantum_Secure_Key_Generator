@@ -7,10 +7,11 @@ import EncryptionDemo from './components/EncryptionDemo';
 import EntropyAnalysis from './components/EntropyAnalysis';
 import ComparisonTable from './components/ComparisonTable';
 import MLKeyGenerator from './components/MLKeyGenerator';
-import MLMetricsDashboard from './components/MLMetricsDashboard';
 import ABTestResults from './components/ABTestResults';
 
 const API_URL = process.env.REACT_APP_API_URL || 'https://quantum-secure-key-generator.onrender.com/api';
+const SUPPORT_UPI_ID = 'shashankts2004@oksbi';
+const SUPPORT_UPI_LINK = `upi://pay?pa=${encodeURIComponent(SUPPORT_UPI_ID)}&pn=${encodeURIComponent('Shashank T S')}&tn=${encodeURIComponent('Support Quantum Key Generator')}`;
 
 const NAV_SECTIONS = [
   {
@@ -30,7 +31,6 @@ const NAV_SECTIONS = [
     emoji: '🤖',
     items: [
       { key: 'ml-gen', icon: 'ML', label: 'ML Generator', hint: 'Generate with correction loop', primary: true },
-      { key: 'ml-dashboard', icon: 'MET', label: 'ML Dashboard', hint: 'Performance and ROI metrics' },
       { key: 'ab-test', icon: 'AB', label: 'A/B Results', hint: 'Control vs treated comparison' },
     ],
   },
@@ -64,6 +64,7 @@ function App() {
   const [showToken, setShowToken] = useState(false);
   const [runtimeLoading, setRuntimeLoading] = useState(false);
   const [runtimeError, setRuntimeError] = useState(null);
+  const [supportCopied, setSupportCopied] = useState(false);
 
   const sortedBackends = useMemo(() => {
     const list = Array.isArray(ibmStatus.backends) ? [...ibmStatus.backends] : [];
@@ -203,6 +204,16 @@ function App() {
     return null;
   }, [activeTab]);
 
+  const copySupportUpi = async () => {
+    try {
+      await navigator.clipboard.writeText(SUPPORT_UPI_ID);
+      setSupportCopied(true);
+      setTimeout(() => setSupportCopied(false), 1800);
+    } catch (err) {
+      setRuntimeError('Unable to copy UPI ID on this browser.');
+    }
+  };
+
   return (
     <div className="app">
       <div className="quantum-bg">
@@ -222,8 +233,22 @@ function App() {
               <p className="subtitle">Production-Grade Quantum Cryptographic Infrastructure</p>
             </div>
           </div>
-          <div className="header-badge">
-            <span className="badge-text">Enhanced Edition</span>
+          <div className="header-actions">
+            <div className="header-badge">
+              <span className="badge-text">Enhanced Edition</span>
+            </div>
+            <div className="support-card">
+              <p className="support-title">Support This Project</p>
+              <p className="support-upi">{SUPPORT_UPI_ID}</p>
+              <div className="support-actions">
+                <button type="button" className="support-btn" onClick={copySupportUpi}>
+                  {supportCopied ? 'Copied' : 'Copy UPI'}
+                </button>
+                <a className="support-btn pay" href={SUPPORT_UPI_LINK}>
+                  Pay via UPI
+                </a>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -355,7 +380,6 @@ function App() {
               {activeTab === 'compare' && <ComparisonTable runtimeMode={runtimeMode} ibmStatus={ibmStatus} />}
               {activeTab === 'info' && <QuantumInfo />}
               {activeTab === 'ml-gen' && <MLKeyGenerator runtimeMode={runtimeMode} ibmStatus={ibmStatus} />}
-              {activeTab === 'ml-dashboard' && <MLMetricsDashboard />}
               {activeTab === 'ab-test' && <ABTestResults />}
             </div>
           </div>
@@ -370,3 +394,4 @@ function App() {
 }
 
 export default App;
+
