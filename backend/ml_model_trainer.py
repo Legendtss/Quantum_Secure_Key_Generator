@@ -128,6 +128,23 @@ class QuantumKeyQualityClassifier:
 
         # Features: raw / pre-generation values + fast bitstring features
         X = df[self.training_feature_names].copy()
+
+        # Fill missing extended feature values with reasonable defaults
+        if "bit_balance_ratio" in X.columns:
+            X["bit_balance_ratio"] = X["bit_balance_ratio"].fillna(df.get("bit_distribution", 0.5))
+        if "transition_count" in X.columns:
+            X["transition_count"] = X["transition_count"].fillna(0)
+        if "max_run_length" in X.columns:
+            X["max_run_length"] = X["max_run_length"].fillna(0)
+        if "mean_run_length" in X.columns:
+            X["mean_run_length"] = X["mean_run_length"].fillna(0.0)
+        if "unique_bitstring_count" in X.columns:
+            X["unique_bitstring_count"] = X["unique_bitstring_count"].fillna(1)
+        if "distribution_entropy_estimate" in X.columns:
+            X["distribution_entropy_estimate"] = X["distribution_entropy_estimate"].fillna(0.0)
+
+        # Also fill any remaining NaNs globally
+        X = X.fillna(0)
         y = target_entropy.astype(float)
 
         self.training_samples = len(df)
@@ -263,15 +280,14 @@ class QuantumKeyQualityClassifier:
                 entropy_score = max(0.0, 1.0 - (2.0 * abs(bit_distribution - 0.5)))
             entropy_score = float(np.clip(entropy_score, 0.0, 1.0))
 
-            # Build feature vector using only non-leaking fields
-            features = np.array(
-                [[
-                    generation_time_ms,
-                    shots_used,
-                    num_qubits,
-                    bit_distribution,
-                ]]
-            )
+            # Build base feature mapping using only non-leaking fields
+            base_values = {
+                "generation_time_ms": generation_time_ms,
+                "shots_used": shots_used,
+                "num_qubits": num_qubits,
+                "bit_distribution": bit_distribution,
+                # legacy / aliases will be filled below
+            }
         except (TypeError, ValueError) as exc:
             return {
                 "prediction": None,
@@ -282,7 +298,56 @@ class QuantumKeyQualityClassifier:
                 "objective": self.objective,
             }
 
-        feature_df = pd.DataFrame(features, columns=self.feature_names)
+        # Determine expected feature ordering from scaler/model/metadata (handle legacy models)
+        expected_features = None
+        if hasattr(self.scaler, "feature_names_in_"):
+            expected_features = list(self.scaler.feature_names_in_)
+        elif self.metadata.get("feature_names"):
+            expected_features = list(self.metadata.get("feature_names"))
+        elif hasattr(self.model, "feature_names_in_"):
+            expected_features = list(self.model.feature_names_in_)
+        else:
+            expected_features = list(self.training_feature_names)
+
+        # Map legacy feature names to current values when possible
+        legacy_map = {}
+        # bit_bias historically represented bit balance (ones fraction)
+        if "bit_bias" in expected_features:
+            legacy_map["bit_bias"] = base_values.get("bit_distribution", 0.5)
+        # latency_per_shot can be approximated by generation_time_ms / shots_used
+        if "latency_per_shot" in expected_features:
+            shots = base_values.get("shots_used", 1) or 1
+            legacy_map["latency_per_shot"] = base_values.get("generation_time_ms", 0.0) / float(shots)
+        # entropy_score is a leakage field but some legacy models expect it; fill with proxy
+        if "entropy_score" in expected_features:
+            legacy_map["entropy_score"] = entropy_score
+
+        # Build final feature vector in expected order, filling unknowns with sensible defaults
+        row = []
+        for fname in expected_features:
+            if fname in base_values:
+                row.append(base_values[fname])
+            elif fname in legacy_map:
+                row.append(legacy_map[fname])
+            else:
+                # extended fast features: try to compute a few from bit_distribution if possible
+                if fname == "bit_balance_ratio":
+                    row.append(base_values.get("bit_distribution", 0.5))
+                elif fname == "transition_count":
+                    row.append(0)
+                elif fname == "max_run_length":
+                    row.append(0)
+                elif fname == "mean_run_length":
+                    row.append(0.0)
+                elif fname == "unique_bitstring_count":
+                    row.append(1)
+                elif fname == "distribution_entropy_estimate":
+                    row.append(0.0)
+                else:
+                    # generic fallback
+                    row.append(0.0)
+
+        feature_df = pd.DataFrame([row], columns=expected_features)
         scaled = self.scaler.transform(feature_df)
         # sklearn can emit a noisy parallel warning repeatedly during inference;
         # suppress it locally so runtime logs stay readable.
