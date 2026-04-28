@@ -16,8 +16,8 @@ class QuantumKeyErrorCorrector:
     def __init__(self, ml_classifier, logger, log_dir="backend/data"):
         self.classifier = ml_classifier
         self.logger = logger
-        self.log_dir = log_dir
-        self.ab_test_log_path = os.path.join(log_dir, "ab_test_log.csv")
+        self.log_dir = self._resolve_log_dir(log_dir)
+        self.ab_test_log_path = os.path.join(self.log_dir, "ab_test_log.csv")
 
         self.max_attempts = 5
         self.min_correction_attempts = 2
@@ -28,6 +28,16 @@ class QuantumKeyErrorCorrector:
 
         self.entropy_analyzer = EntropyAnalyzer()
         self._ensure_ab_test_file()
+
+    def _resolve_log_dir(self, log_dir):
+        """Resolve correction log directory to stable absolute backend/data."""
+        if os.path.isabs(log_dir):
+            return log_dir
+
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        if log_dir.startswith("backend/"):
+            return os.path.join(base_dir, log_dir.split("backend/", 1)[1])
+        return os.path.join(base_dir, log_dir)
 
     def _ensure_ab_test_file(self):
         os.makedirs(self.log_dir, exist_ok=True)
@@ -92,6 +102,7 @@ class QuantumKeyErrorCorrector:
         return 0.0
 
     def _attempt_single_generation(self, key_generator, key_length, shots):
+        # Generate candidate and compute fast features + ML prediction only
         start = time.perf_counter()
         key = key_generator.generate_secure_key(key_length=key_length, shots=shots)
         generation_time_ms = (time.perf_counter() - start) * 1000.0
@@ -99,14 +110,16 @@ class QuantumKeyErrorCorrector:
         key["shots_used"] = int(shots)
 
         bit_string = key.get("binary", "")
-        entropy_score = 0.0
-        try:
-            entropy_result = self.entropy_analyzer.analyze_randomness(bit_string)
-            entropy_score = self._extract_entropy_score(entropy_result)
-        except Exception:
-            entropy_score = 0.0
 
+        # If classifier is not available, fall back to computing full entropy immediately
         if not self._classifier_available():
+            entropy_score = 0.0
+            try:
+                entropy_result = self.entropy_analyzer.analyze_randomness(bit_string)
+                entropy_score = self._extract_entropy_score(entropy_result)
+            except Exception:
+                entropy_score = 0.0
+
             quality = {
                 "prediction": None,
                 "confidence": 0.0,
@@ -125,20 +138,24 @@ class QuantumKeyErrorCorrector:
                 "time_ms": generation_time_ms,
             }
 
-        bit_distribution = bit_string.count("1") / max(1, len(bit_string))
+        # Extract fast features and predict
+        feature_dict, _ = self.classifier.extract_fast_features_from_generation(key)
+        bit_distribution = feature_dict.get("bit_balance_ratio", 0.5)
         quality = self.classifier.predict_quality(
-            generation_time_ms=generation_time_ms,
-            shots_used=shots,
-            num_qubits=max(1, key_length // 16),
+            generation_time_ms=feature_dict.get("generation_time_ms", 0.0),
+            shots_used=feature_dict.get("shots_used", 0.0),
+            num_qubits=feature_dict.get("num_qubits", 1.0),
             bit_distribution=bit_distribution,
-            entropy_score=entropy_score,
+            entropy_score=None,
         )
 
+        # Return candidate with predicted quality but without expensive full entropy yet
         return {
             "key": key,
             "quality": quality,
-            "entropy": float(entropy_score),
+            "entropy": None,
             "time_ms": generation_time_ms,
+            "fast_features": feature_dict,
         }
 
     def _select_best_key(self, key_attempts):
@@ -221,7 +238,6 @@ class QuantumKeyErrorCorrector:
             elapsed_total_ms = (time.perf_counter() - start_total) * 1000.0
             if elapsed_total_ms >= effective_time_budget_ms:
                 break
-
             single = self._attempt_single_generation(
                 key_generator=key_generator,
                 key_length=key_length,
@@ -229,20 +245,19 @@ class QuantumKeyErrorCorrector:
             )
             key_attempts.append(single)
 
+            # Log ML prediction (entropy unknown until we run full analyzer on top K)
             quality = single.get("quality") or {}
-            entropy_score = float(single.get("entropy", 0.0) or 0.0)
-            predicted_entropy = float(quality.get("predicted_entropy_score", entropy_score) or entropy_score)
+            predicted_entropy = float(quality.get("predicted_entropy_score", 0.0) or 0.0)
             ranking_score = float(quality.get("ranking_score", predicted_entropy) or predicted_entropy)
-            expected_gain = float(quality.get("expected_entropy_gain", 0.0) or 0.0)
 
             self.log_ab_test_event(
                 session_id=session_id,
                 variant=variant,
                 attempt_num=attempt,
-                entropy_score=entropy_score,
+                entropy_score=0.0,
                 predicted_entropy=predicted_entropy,
                 ranking_score=ranking_score,
-                expected_gain=expected_gain,
+                expected_gain=quality.get("expected_entropy_gain", 0.0),
                 generation_time_ms=single.get("time_ms", 0.0),
                 correction_applied=enable_correction and attempt > 1,
                 key_length=key_length,
@@ -253,9 +268,39 @@ class QuantumKeyErrorCorrector:
             if not enable_correction:
                 break
 
-            min_attempts_met = attempt >= min(attempts_limit, self.min_correction_attempts)
-            if min_attempts_met and entropy_score >= self.target_entropy_score and expected_gain <= self.min_expected_gain:
-                break
+            # Continue generating candidates until attempts_limit; full entropy tests will be run on top K below
+            continue
+
+        # Run full entropy analysis only on top-K predicted candidates to save work.
+        top_k = min(3, max(1, len(key_attempts)))
+        # sort by predicted ranking_score
+        ranked = sorted(
+            [k for k in key_attempts if k.get("quality")],
+            key=lambda x: float(x.get("quality", {}).get("ranking_score", 0.0)),
+            reverse=True,
+        )
+        to_evaluate = ranked[:top_k]
+
+        for cand in to_evaluate:
+            try:
+                bit_string = cand.get("key", {}).get("binary", "")
+                entropy_result = self.entropy_analyzer.analyze_randomness(bit_string)
+                entropy_score = self._extract_entropy_score(entropy_result)
+            except Exception:
+                entropy_score = 0.0
+
+            cand["entropy"] = float(entropy_score)
+            # Recompute the quality payload now that we have measured entropy
+            quality = cand.get("quality") or {}
+            # Use measured entropy as baseline to compute expected gain and ranking
+            updated_quality = self.classifier.predict_quality(
+                generation_time_ms=cand.get("time_ms", 0.0),
+                shots_used=cand.get("key", {}).get("shots_per_chunk", cand.get("key", {}).get("shots", 0)),
+                num_qubits=max(1, key_length // 16),
+                bit_distribution=cand.get("fast_features", {}).get("bit_balance_ratio", 0.5),
+                entropy_score=entropy_score,
+            )
+            cand["quality"] = updated_quality
 
         best = self._select_best_key(key_attempts)
         if best is None:

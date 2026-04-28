@@ -45,6 +45,17 @@ class QuantumKeyQualityClassifier:
             "num_qubits",
             "bit_distribution",
         ]
+        # Extended fast features derived from bitstring / counts
+        self.extended_feature_names = [
+            "bit_balance_ratio",
+            "transition_count",
+            "max_run_length",
+            "mean_run_length",
+            "unique_bitstring_count",
+            "distribution_entropy_estimate",
+        ]
+        # Full set used for training (non-leaking)
+        self.training_feature_names = self.feature_names + self.extended_feature_names
         self.objective = "entropy_maximization"
         self.tail_threshold = 0.95
         self.good_entropy_threshold = 0.98
@@ -110,15 +121,13 @@ class QuantumKeyQualityClassifier:
             + 0.15 * df["min_entropy"]
         ).clip(lower=0.0, upper=1.0)
 
-        # Features: only raw / pre-generation values
-        X = df[
-            [
-                "generation_time_ms",
-                "shots_used",
-                "num_qubits",
-                "bit_distribution",
-            ]
-        ].copy()
+        # Ensure extended features exist; if not, attempt to compute from available columns
+        for fname in self.extended_feature_names:
+            if fname not in df.columns:
+                df[fname] = 0
+
+        # Features: raw / pre-generation values + fast bitstring features
+        X = df[self.training_feature_names].copy()
         y = target_entropy.astype(float)
 
         self.training_samples = len(df)
@@ -150,6 +159,22 @@ class QuantumKeyQualityClassifier:
         self.model.fit(X_train_scaled, y_train)
 
         metrics = self.evaluate(X_test_scaled, y_test)
+
+        # Print core regression metrics for quick validation
+        print("[ML Train] Evaluation:")
+        print(f"  R^2: {metrics.get('r2'):.4f}")
+        print(f"  MAE: {metrics.get('mae'):.6f}")
+
+        # Show feature importances (map to training_feature_names)
+        try:
+            importances = self.model.feature_importances_
+            fi = {name: float(imp) for name, imp in zip(self.training_feature_names, importances)}
+            print("[ML Train] Feature importances:")
+            for k, v in sorted(fi.items(), key=lambda x: x[1], reverse=True):
+                print(f"  {k} -> {v:.4f}")
+            metrics["feature_importance"] = fi
+        except Exception:
+            metrics["feature_importance"] = {}
 
         try:
             kf = KFold(n_splits=5, shuffle=True, random_state=random_state)
@@ -292,6 +317,71 @@ class QuantumKeyQualityClassifier:
             "model_version": self.metadata.get("model_version", "v2"),
             "generated_at": datetime.now(timezone.utc).isoformat(),
         }
+
+    def extract_fast_features_from_generation(self, generation_result):
+        """Extract fast feature vector from a generation_result dict.
+
+        Returns values in the order of self.training_feature_names.
+        """
+        bits = generation_result.get("binary") or generation_result.get("bits") or ""
+        bits_len = len(bits)
+        generation_time_ms = float(generation_result.get("generation_time_ms", 0.0) or 0.0)
+        shots_used = float(generation_result.get("shots_per_chunk", generation_result.get("shots_used", 0)) or 0.0)
+        num_qubits = float(generation_result.get("length", max(1, bits_len // 16)))
+
+        # basic distribution
+        bit_balance_ratio = bits.count("1") / max(1, bits_len) if bits_len > 0 else 0.5
+
+        # transitions and run lengths
+        transition_count = sum(1 for i in range(len(bits) - 1) if bits[i] != bits[i + 1]) if bits_len > 1 else 0
+        runs = []
+        if bits_len > 0:
+            current = bits[0]
+            run_len = 1
+            for ch in bits[1:]:
+                if ch == current:
+                    run_len += 1
+                else:
+                    runs.append(run_len)
+                    current = ch
+                    run_len = 1
+            runs.append(run_len)
+        max_run_length = max(runs) if runs else 0
+        mean_run_length = float(sum(runs) / len(runs)) if runs else 0.0
+
+        # unique patterns and approximate entropy from chunk_counts
+        chunk_counts = generation_result.get("chunk_counts")
+        unique_bitstring_count = 1
+        distribution_entropy_estimate = 0.0
+        if isinstance(chunk_counts, list) and chunk_counts:
+            unique_bitstring_count = int(sum(len(c.keys()) for c in chunk_counts) / len(chunk_counts))
+            import math
+
+            entropies = []
+            for c in chunk_counts:
+                total = float(sum(c.values()))
+                if total <= 0:
+                    continue
+                probs = [v / total for v in c.values()]
+                h = -sum((p * math.log2(p) for p in probs if p > 0))
+                norm = math.log2(max(2, len(c)))
+                entropies.append(h / norm if norm > 0 else 0.0)
+            distribution_entropy_estimate = float(sum(entropies) / len(entropies)) if entropies else 0.0
+
+        values = [
+            generation_time_ms,
+            shots_used,
+            num_qubits,
+            bit_balance_ratio,
+            transition_count,
+            max_run_length,
+            mean_run_length,
+            unique_bitstring_count,
+            distribution_entropy_estimate,
+        ]
+
+        # Return as dict and array-friendly order
+        return {name: val for name, val in zip(self.training_feature_names, values)}, np.array([values])
 
     def save_model(self):
         """Save model, scaler, and metadata to disk."""

@@ -155,8 +155,23 @@ class QuantumRandomGenerator:
         chunks = (key_length + chunk_size - 1) // chunk_size
         
         for _ in range(chunks):
-            bits = self._generate_raw_bits(num_qubits=chunk_size, shots=shots)
+            # For richer ML features, capture per-chunk counts as well.
+            qc = QuantumCircuit(chunk_size, chunk_size)
+            for i in range(chunk_size):
+                qc.h(i)
+            qc.measure(range(chunk_size), range(chunk_size))
+            try:
+                result = self.simulator.run(qc, shots=shots).result()
+            except:
+                compiled_circuit = transpile(qc, self.simulator)
+                result = self.simulator.run(compiled_circuit, shots=shots).result()
+            counts = result.get_counts()
+            bits = max(counts, key=counts.get).zfill(chunk_size)
             all_bits.append(bits)
+            # store chunk-level counts for downstream feature extraction
+            if 'chunk_counts' not in locals():
+                chunk_counts = []
+            chunk_counts.append(counts)
         
         # Combine all bits and truncate to the exact key_length
         full_binary = ''.join(all_bits)[:key_length]
@@ -174,15 +189,20 @@ class QuantumRandomGenerator:
         qc.measure(range(chunk_size), range(chunk_size))
         circuit_diagram = qc.draw('text', fold=-1)
         
-        return {
+        result = {
             'binary': full_binary,
             'hex': hex_key,
             'length': key_length,
             'hash': key_hash,
             'circuit': str(circuit_diagram),
             'chunks_generated': chunks,
-            'shots_per_chunk': shots
+            'shots_per_chunk': shots,
         }
+        # attach collected chunk counts when available for ML feature extraction
+        if 'chunk_counts' in locals():
+            result['chunk_counts'] = chunk_counts
+
+        return result
     
     def _generate_histogram(self, counts):
         """Generate base64 encoded histogram image"""
