@@ -37,14 +37,13 @@ class QuantumKeyQualityClassifier:
         self.metadata = {}
         self.training_samples = 0
         self.latest_metrics = {}
+        # Use only non-leaking, pre-generation or raw features.
+        # Removed entropy-derived features to avoid leakage into the target.
         self.feature_names = [
             "generation_time_ms",
             "shots_used",
             "num_qubits",
             "bit_distribution",
-            "entropy_score",
-            "bit_bias",
-            "latency_per_shot",
         ]
         self.objective = "entropy_maximization"
         self.tail_threshold = 0.95
@@ -103,17 +102,23 @@ class QuantumKeyQualityClassifier:
         p01 = float(df["generation_time_ms"].quantile(0.01))
         df["generation_time_ms"] = df["generation_time_ms"].clip(lower=p01, upper=p95)
 
-        df["bit_bias"] = (df["bit_distribution"] - 0.5).abs()
-        df["latency_per_shot"] = df["generation_time_ms"] / df["shots_used"].clip(lower=1.0)
-
-        # Continuous optimization target: entropy-rich composite.
+        # Do not create entropy-derived features here (avoid leakage).
+        # Keep target calculation (we still need entropy columns to compute y).
         target_entropy = (
             0.45 * df["entropy_score"]
             + 0.40 * df["shannon_entropy"]
             + 0.15 * df["min_entropy"]
         ).clip(lower=0.0, upper=1.0)
 
-        X = df[self.feature_names].copy()
+        # Features: only raw / pre-generation values
+        X = df[
+            [
+                "generation_time_ms",
+                "shots_used",
+                "num_qubits",
+                "bit_distribution",
+            ]
+        ].copy()
         y = target_entropy.astype(float)
 
         self.training_samples = len(df)
@@ -228,22 +233,18 @@ class QuantumKeyQualityClassifier:
             num_qubits = float(num_qubits)
             bit_distribution = float(bit_distribution)
 
+            # entropy_score may be provided as a baseline; if not, compute a simple proxy
             if entropy_score is None:
                 entropy_score = max(0.0, 1.0 - (2.0 * abs(bit_distribution - 0.5)))
             entropy_score = float(np.clip(entropy_score, 0.0, 1.0))
 
-            bit_bias = abs(bit_distribution - 0.5)
-            latency_per_shot = generation_time_ms / max(1.0, shots_used)
-
+            # Build feature vector using only non-leaking fields
             features = np.array(
                 [[
                     generation_time_ms,
                     shots_used,
                     num_qubits,
                     bit_distribution,
-                    entropy_score,
-                    bit_bias,
-                    latency_per_shot,
                 ]]
             )
         except (TypeError, ValueError) as exc:
@@ -372,9 +373,9 @@ class QuantumKeyQualityClassifier:
         metadata["objective"] = self.objective
 
         if metadata["model_loaded"]:
+            # Sample row matching new feature set (no entropy-derived fields)
             sample_features = pd.DataFrame(
-                [[300.0, 256.0, 16.0, 0.5, 0.97, 0.0, 1.171875]],
-                columns=self.feature_names,
+                [[300.0, 256.0, 16.0, 0.5]], columns=self.feature_names
             )
             scaled = self.scaler.transform(sample_features)
             start = time.perf_counter()
