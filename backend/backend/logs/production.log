@@ -1,0 +1,8 @@
+{"type": "api_call", "endpoint": "/api/ml/ab-test-results", "method": "GET", "status_code": 200, "duration_ms": 13.469, "timestamp": "2026-04-24T13:42:09.871326+00:00", "log_level": "INFO"}
+{"type": "api_call", "endpoint": "/api/ml/improvement-summary", "method": "GET", "status_code": 200, "duration_ms": 2.53, "timestamp": "2026-04-24T13:42:09.874335+00:00", "log_level": "INFO"}
+{"type": "api_call", "endpoint": "/api/ml/correction-stats", "method": "GET", "status_code": 200, "duration_ms": 2.876, "timestamp": "2026-04-24T13:42:09.878324+00:00", "log_level": "INFO"}
+{"type": "api_call", "endpoint": "/api/ml/run-ab-test", "method": "POST", "status_code": 500, "duration_ms": 495.905, "timestamp": "2026-04-24T13:44:38.243947+00:00", "log_level": "INFO"}
+{"type": "alert", "level": "WARNING", "message": "High error rate detected: 100.00%", "timestamp": "2026-04-24T13:44:38.245011+00:00", "log_level": "WARNING"}
+{"type": "api_call", "endpoint": "/api/ml/run-ab-test", "method": "POST", "status_code": 500, "duration_ms": 347.946, "timestamp": "2026-04-24T13:45:08.442215+00:00", "log_level": "INFO"}
+{"type": "alert", "level": "WARNING", "message": "High error rate detected: 100.00%", "timestamp": "2026-04-24T13:45:08.442215+00:00", "log_level": "WARNING"}
+{"type": "api_call", "endpoint": "/api/ml/run-ab-test", "method": "POST", "status_code": 200, "duration_ms": 435.413, "timestamp": "2026-04-24T13:46:32.986189+00:00", "log_level": "INFO"}
