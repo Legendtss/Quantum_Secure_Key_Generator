@@ -84,6 +84,21 @@ quantum-key-generator/
 └── README.md
 ```
 
+## ML logging and fast-inference note
+
+The backend ML pipeline logs extra "fast" features (cheap to compute) to `backend/data/training_data.csv`. These are used to predict key quality quickly so the full entropy battery runs only on top-K candidates. See `backend/ml_data_logger.py` and `backend/ml_model_trainer.py` for details.
+
+New CSV columns:
+
+- `bit_balance_ratio`
+- `transition_count`
+- `max_run_length`
+- `mean_run_length`
+- `unique_bitstring_count`
+- `distribution_entropy_estimate`
+
+Inference flow: generate candidates → extract fast features → ML predicts → run full analyzer only on top-K predicted candidates.
+
 ## 🚀 Installation & Setup
 
 ### Prerequisites
