@@ -399,6 +399,45 @@ Monitoring and admin endpoints:
 
 ## 📜 License
 
+## ❤️ Support This Project (Optional)
+
+👨‍💻 About the Developer
+
+Hi, I’m Shashank TS, an AI/ML student focused on building systems at the intersection of quantum computing, machine learning, and cybersecurity.
+
+This project explores how quantum randomness + ML optimization can be used to generate stronger cryptographic keys for real-world security applications.
+
+🚀 What Drives This Project
+
+I’ve always been curious about how theoretical concepts like quantum mechanics can be applied in practical systems.
+
+This project is my attempt to:
+
+- Bridge quantum theory → real-world engineering
+- Experiment with next-generation security systems
+- Build something that is both technically deep and practically usable
+
+🔗 Connect With Me
+
+- LinkedIn: https://www.linkedin.com/in/shashankts2004/
+- GitHub: https://github.com/Legendtss
+- Portfolio: https://legendtss.github.io/Portfolio/
+- Email: shashankts2026@gmail.com
+
+❤️ Support This Project (Optional)
+
+If you found this project interesting or useful, you can support its development. Your support helps me:
+
+- Improve and scale the system
+- Explore more advanced quantum + ML applications
+- Continue building open technical projects
+
+(Optional — no obligation at all)
+
+[![UPI QR Code](frontend/src/assets/upi-qr-code.jpg)](upi://pay?pa=shashankts2004%40oksbi&pn=Shashank%20T%20S&tn=Support%20Quantum%20Key%20Generator)
+
+UPI ID: `shashankts2004@oksbi` — [Pay via UPI](upi://pay?pa=shashankts2004%40oksbi&pn=Shashank%20T%20S&tn=Support%20Quantum%20Key%20Generator)
+
 This project is for educational purposes. Feel free to use and modify.
 
 ## 🙏 Acknowledgments
