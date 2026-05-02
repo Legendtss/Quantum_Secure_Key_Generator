@@ -399,44 +399,24 @@ Monitoring and admin endpoints:
 
 ## 📜 License
 
-## ❤️ Support This Project (Optional)
+## 🤝 Support the Project
 
-👨‍💻 About the Developer
+If you found this project interesting, I’d really appreciate any help in spreading the word.
 
-Hi, I’m Shashank TS, an AI/ML student focused on building systems at the intersection of quantum computing, machine learning, and cybersecurity.
+Ways you can support:
+- Share the project with others who may find it useful
+- Star the repository if you like the idea
+- Open an issue with suggestions, feedback, or ideas
+- Refer me to internships, research opportunities, or entry-level roles in AI/ML, quantum computing, cybersecurity, or full-stack development
+- Connect with me if you’re working on similar projects or collaboration opportunities
 
-This project explores how quantum randomness + ML optimization can be used to generate stronger cryptographic keys for real-world security applications.
+I’m especially open to:
+- Internship referrals
+- New grad and entry-level job opportunities
+- Research collaborations
+- Mentorship and career guidance
 
-🚀 What Drives This Project
-
-I’ve always been curious about how theoretical concepts like quantum mechanics can be applied in practical systems.
-
-This project is my attempt to:
-
-- Bridge quantum theory → real-world engineering
-- Experiment with next-generation security systems
-- Build something that is both technically deep and practically usable
-
-🔗 Connect With Me
-
-- LinkedIn: https://www.linkedin.com/in/shashankts2004/
-- GitHub: https://github.com/Legendtss
-- Portfolio: https://legendtss.github.io/Portfolio/
-- Email: shashankts2026@gmail.com
-
-❤️ Support This Project (Optional)
-
-If you found this project interesting or useful, you can support its development. Your support helps me:
-
-- Improve and scale the system
-- Explore more advanced quantum + ML applications
-- Continue building open technical projects
-
-(Optional — no obligation at all)
-
-[![UPI QR Code](frontend/src/assets/upi-qr-code.jpg)](upi://pay?pa=shashankts2004%40oksbi&pn=Shashank%20T%20S&tn=Support%20Quantum%20Key%20Generator)
-
-UPI ID: `shashankts2004@oksbi` — [Pay via UPI](upi://pay?pa=shashankts2004%40oksbi&pn=Shashank%20T%20S&tn=Support%20Quantum%20Key%20Generator)
+If you know of a role, project, or team where my background could be a fit, please feel free to reach out.
 
 This project is for educational purposes. Feel free to use and modify.
 
