@@ -8,11 +8,14 @@ import EntropyAnalysis from './components/EntropyAnalysis';
 import ComparisonTable from './components/ComparisonTable';
 import MLKeyGenerator from './components/MLKeyGenerator';
 import ABTestResults from './components/ABTestResults';
-import upiQrCode from './assets/upi-qr-code.jpg';
 
 const API_URL = process.env.REACT_APP_API_URL || 'https://quantum-secure-key-generator.onrender.com/api';
-const SUPPORT_UPI_ID = 'shashankts2004@oksbi';
-const SUPPORT_UPI_LINK = `upi://pay?pa=${encodeURIComponent(SUPPORT_UPI_ID)}&pn=${encodeURIComponent('Shashank T S')}&tn=${encodeURIComponent('Support Quantum Key Generator')}`;
+const SUPPORT_LINKS = [
+  { label: 'LinkedIn', href: 'https://www.linkedin.com/in/shashankts2004/' },
+  { label: 'GitHub', href: 'https://github.com/Legendtss' },
+  { label: 'Portfolio', href: 'https://legendtss.github.io/Portfolio/' },
+  { label: 'Email', href: 'mailto:shashankts2026@gmail.com' },
+];
 
 const NAV_SECTIONS = [
   {
@@ -65,7 +68,6 @@ function App() {
   const [showToken, setShowToken] = useState(false);
   const [runtimeLoading, setRuntimeLoading] = useState(false);
   const [runtimeError, setRuntimeError] = useState(null);
-  const [supportCopied, setSupportCopied] = useState(false);
   const [supportExpanded, setSupportExpanded] = useState(false);
 
   const sortedBackends = useMemo(() => {
@@ -205,16 +207,6 @@ function App() {
     }
     return null;
   }, [activeTab]);
-
-  const copySupportUpi = async () => {
-    try {
-      await navigator.clipboard.writeText(SUPPORT_UPI_ID);
-      setSupportCopied(true);
-      setTimeout(() => setSupportCopied(false), 1800);
-    } catch (err) {
-      setRuntimeError('Unable to copy UPI ID on this browser.');
-    }
-  };
 
   return (
     <div className="app">
@@ -399,16 +391,34 @@ function App() {
               ×
             </button>
             <p className="support-title">Support This Project</p>
-            <img src={upiQrCode} alt="UPI QR Code" className="support-qr" />
-            <p className="support-upi">{SUPPORT_UPI_ID}</p>
-            <div className="support-actions">
-              <button type="button" className="support-btn" onClick={copySupportUpi}>
-                {supportCopied ? 'Copied' : 'Copy UPI'}
-              </button>
-              <a className="support-btn pay" href={SUPPORT_UPI_LINK}>
-                Pay via UPI
-              </a>
+            <p className="support-copy">
+              Hi, I’m Shashank TS, an AI/ML student focused on quantum computing,
+              machine learning, and cybersecurity.
+            </p>
+            <p className="support-copy">
+              This project explores how quantum randomness and ML optimization can be
+              used to generate stronger cryptographic keys for real-world security
+              applications.
+            </p>
+            <div className="support-section">
+              <p className="support-section-title">What this support helps with</p>
+              <ul className="support-list">
+                <li>Improve and scale the system</li>
+                <li>Explore more advanced quantum + ML applications</li>
+                <li>Continue building open technical projects</li>
+              </ul>
             </div>
+            <div className="support-section">
+              <p className="support-section-title">Connect with me</p>
+              <div className="support-links">
+                {SUPPORT_LINKS.map((link) => (
+                  <a key={link.label} className="support-btn" href={link.href} target="_blank" rel="noreferrer">
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+            </div>
+            <p className="support-footer-note">This project is for educational purposes. Feel free to use and modify.</p>
           </div>
         </div>
       )}
